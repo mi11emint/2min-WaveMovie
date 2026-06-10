@@ -88,7 +88,6 @@
             display: block;
         }
 
-        /* プレビュー再生用のビデオタグ（ Canvasと完全に重ねる ） */
         video {
             position: absolute;
             top: 0;
@@ -96,7 +95,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            display: none; /* 録音完了後に表示する */
+            display: none;
         }
 
         .timer-display {
@@ -106,7 +105,7 @@
             font-size: 1.2rem;
             color: #ff0844;
             display: none;
-            z-index: 10; /* ビデオより前に出す */
+            z-index: 10;
         }
 
         .top-icons, .bottom-controls {
@@ -118,8 +117,12 @@
             font-size: 1.2rem;
             margin-top: 15px;
         }
-        .top-icons span, .bottom-controls span { cursor: pointer; transition: transform 0.1s; }
-        .top-icons span:active, .bottom-controls span:active { transform: scale(0.9); }
+        .top-icons span, .bottom-controls span { 
+            cursor: pointer; 
+            transition: transform 0.1s;
+            padding: 5px; /* スマホでタップしやすく領域を拡大 */
+        }
+        .top-icons span:active, .bottom-controls span:active { transform: scale(0.8); }
         
         #recBtn.recording { color: #ff0844; }
         #downloadBtn.ready { color: #00f2fe; }
@@ -242,7 +245,8 @@
             <div class="bottom-controls">
                 <span id="skipBackBtn">⏮️</span>
                 <span id="rewindBtn">⏪</span>
-                <span id="playPauseBtn" class="play-pause-btn">▶️</span> <span id="forwardBtn">⏩</span>
+                <span id="playPauseBtn" class="play-pause-btn">▶️</span>
+                <span id="forwardBtn">⏩</span>
                 <span id="skipForwardBtn">⏭️</span>
             </div>
         </div>
@@ -292,7 +296,6 @@
         const btnWhite = document.getElementById('btnWhite');
         const palettes = document.querySelectorAll('.palette-circle');
         
-        // 再生コントロール系ボタンの取得
         const playPauseBtn = document.getElementById('playPauseBtn');
         const seekBar = document.getElementById('seekBar');
         const skipBackBtn = document.getElementById('skipBackBtn');
@@ -311,38 +314,33 @@
 
         let currentBgColor = 'black';
         let currentWaveColors = ["#fff3b0", "#cae7e3"];
-
-        // シークバーの自動更新を一時停止するためのフラグ（つまみを触っている間用）
         let isUserChangingIndex = false;
 
         drawStaticCircle();
 
         // --- 背景色・カラーパレット切り替え ---
         btnBlack.addEventListener('click', () => {
-            if (videoUrl) return; // 録音後は切り替え不可
             currentBgColor = 'black';
             btnBlack.classList.add('active');
             btnWhite.classList.remove('active');
             canvasBg.classList.remove('theme-white');
-            if (!audioCtx) drawStaticCircle();
+            if (!videoUrl) drawStaticCircle();
         });
 
         btnWhite.addEventListener('click', () => {
-            if (videoUrl) return; // 録音後は切り替え不可
             currentBgColor = 'white';
             btnWhite.classList.add('active');
             btnBlack.classList.remove('active');
             canvasBg.classList.add('theme-white');
-            if (!audioCtx) drawStaticCircle();
+            if (!videoUrl) drawStaticCircle();
         });
 
         palettes.forEach(palette => {
             palette.addEventListener('click', () => {
-                if (videoUrl) return; // 録音後は切り替え不可
                 palettes.forEach(p => p.classList.remove('selected'));
                 palette.classList.add('selected');
                 currentWaveColors = JSON.parse(palette.dataset.colors);
-                if (!audioCtx) drawStaticCircle();
+                if (!videoUrl) drawStaticCircle();
             });
         });
 
@@ -366,15 +364,12 @@
             ctx.stroke();
         }
 
-        // --- 録音スタート ---
+        // --- 📋 録音スタート ---
         recBtn.addEventListener('click', async () => {
             if (mediaRecorder && mediaRecorder.state === "recording") return;
             
-            // すでに動画がある場合は先にリセットを促す
-            if (videoUrl) {
-                alert("すでに録音された動画があります。↩️マークを押してリセットしてください。");
-                return;
-            }
+            // 新しい録音を開始するため、前のプレビュー動画は一旦消去
+            resetDataWithoutPrompt();
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -410,14 +405,12 @@
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     videoUrl = URL.createObjectURL(blob);
                     
-                    // ビデオ要素に動画をセットして準備
                     video.src = videoUrl;
-                    video.style.display = 'block'; // Canvasの上にビデオを表示して被せる
-                    canvas.style.display = 'none'; // Canvasを一旦隠す
+                    video.style.display = 'block'; 
+                    canvas.style.display = 'none'; 
                     
                     downloadBtn.classList.add('ready');
-                    playPauseBtn.innerText = "▶️"; // 再生準備完了のマークに
-                    alert("録音が終了しました！下の再生ボタンで確認できます。");
+                    playPauseBtn.innerText = "▶️";
                 };
 
                 mediaRecorder.start();
@@ -441,7 +434,7 @@
             }
         });
 
-        // --- 録音ストップ ---
+        // --- ⏹️ 録音ストップ ---
         stopBtn.addEventListener('click', () => {
             stopRecording();
         });
@@ -454,7 +447,7 @@
                 stream.getTracks().forEach(track => track.stop());
             }
             if (animationId) {
-                cancelAnimationFrame(animationId); // 波形の描画ループを止める
+                cancelAnimationFrame(animationId);
             }
             clearInterval(timerInterval);
             recBtn.classList.remove('recording');
@@ -467,30 +460,38 @@
             timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
 
-        // --- ↩️ リセット（最初からやり直し）機能 ---
+        // --- ↩️ リセット（やり直し）機能 ---
         resetBtn.addEventListener('click', () => {
-            if (confirm("録音したデータを消去して、最初からやり直しますか？")) {
-                // ビデオとURLの破棄
-                video.pause();
-                video.src = "";
-                videoUrl = null;
-                video.style.display = 'none';
-                canvas.style.display = 'block';
-                
-                // 各種状態の初期化
-                audioCtx = null;
-                seekBar.value = 0;
-                playPauseBtn.innerText = "▶️";
-                downloadBtn.classList.remove('ready');
-                
-                drawStaticCircle();
+            if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
+                resetDataWithoutPrompt();
+                alert("リセットしました。白い⚪を押すと新しく録音できます。");
             }
         });
+
+        // 内部的にデータを綺麗にする関数（いつでも安全に呼べる）
+        function resetDataWithoutPrompt() {
+            video.pause();
+            video.src = "";
+            if (videoUrl) {
+                URL.revokeObjectURL(videoUrl); // メモリ解放
+                videoUrl = null;
+            }
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+            
+            seekBar.value = 0;
+            playPauseBtn.innerText = "▶️";
+            downloadBtn.classList.remove('ready');
+            
+            if (animationId) cancelAnimationFrame(animationId);
+            audioCtx = null;
+            drawStaticCircle();
+        }
 
         // --- 📩 ダウンロード機能 ---
         downloadBtn.addEventListener('click', () => {
             if (!videoUrl) {
-                alert("先に⚪ボタンで録音してください。");
+                alert("保存する動画がありません。先に⚪ボタンで録音を完了させてください。");
                 return;
             }
             const a = document.createElement('a');
@@ -502,75 +503,80 @@
         });
 
         // ==========================================
-        // 🎬 プレビュー再生コントロール機能（追加部分）
+        // 🎬 プレビュー再生コントロール機能（確実に動くように修正）
         // ==========================================
 
         // 1. 再生・一時停止ボタン
         playPauseBtn.addEventListener('click', () => {
-            if (!videoUrl) return; // 録音前なら何もしない
+            if (!videoUrl) {
+                alert("再生する動画がありません。先に⚪で録音し、⏹️で終了してください。");
+                return;
+            }
             
             if (video.paused) {
                 video.play();
-                playPauseBtn.innerText = "⏸️"; // 一時停止マークにする
+                playPauseBtn.innerText = "⏸️";
             } else {
                 video.pause();
-                playPauseBtn.innerText = "▶️"; // 再生マークにする
+                playPauseBtn.innerText = "▶️";
             }
         });
 
-        // 2. ビデオの読み込みが終わったらシークバーの最大値を動画の長さに合わせる
+        // 2. ビデオの長さが確定したらシークバーを同期
         video.addEventListener('loadedmetadata', () => {
             seekBar.max = video.duration;
             seekBar.value = 0;
         });
 
-        // 3. 再生中にシークバーを自動で進める
+        // 3. 再生中のシークバー自動更新
         video.addEventListener('timeupdate', () => {
-            if (!isUserChangingIndex) {
+            if (!isUserChangingIndex && video.duration) {
                 seekBar.value = video.currentTime;
             }
         });
 
-        // 4. 動画が最後まで再生し終わったらマークを戻す
+        // 4. 最後まで再生し終わったら
         video.addEventListener('ended', () => {
             playPauseBtn.innerText = "▶️";
+            video.currentTime = 0;
             seekBar.value = 0;
         });
 
-        // 5. ユーザーがシークバーのつまみを触っているときの処理
+        // 5. シークバーの手動操作
         seekBar.addEventListener('input', () => {
             if (!videoUrl) return;
             isUserChangingIndex = true;
-            video.currentTime = seekBar.value; // つまみの位置に合わせて動画の時間を飛ばす
+            video.currentTime = seekBar.value;
         });
 
         seekBar.addEventListener('change', () => {
             isUserChangingIndex = false;
         });
 
-        // 6. 各種スキップ・巻き戻しボタン（5秒ずつ移動）
+        // 6. 各種スキップ・巻き戻し
         skipBackBtn.addEventListener('click', () => {
             if (!videoUrl) return;
-            video.currentTime = 0; // 一番最初に戻る
+            video.currentTime = 0;
         });
 
         rewindBtn.addEventListener('click', () => {
             if (!videoUrl) return;
-            video.currentTime = Math.max(0, video.currentTime - 5); // 5秒戻る
+            video.currentTime = Math.max(0, video.currentTime - 5);
         });
 
         forwardBtn.addEventListener('click', () => {
             if (!videoUrl) return;
-            video.currentTime = Math.min(video.duration, video.currentTime + 5); // 5秒進む
+            video.currentTime = Math.min(video.duration, video.currentTime + 5);
         });
 
         skipForwardBtn.addEventListener('click', () => {
             if (!videoUrl) return;
-            video.currentTime = video.duration; // 一番最後まで進む
+            video.currentTime = video.duration;
         });
 
         // 波形描画ループ
         function draw() {
+            if (canvas.style.display === 'none') return; // ビデオ再生中は描画をスキップして軽量化
             animationId = requestAnimationFrame(draw);
             analyser.getByteFrequencyData(dataArray);
             
