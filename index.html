@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Wave Movie Maker</title>
+    <style>
+        @font-face {
+            font-family: 'Cinecaption';
+            src: url('https://dl.dropboxusercontent.com/scl/fi/gbyay8c3as3f0l2e2q2un/cinecaption_2.28.woff2?rlkey=pgaofit9g6699gsww2m3p9l7b&dl=0') format('woff2');
+            font-display: swap;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Cinecaption', 'Courier New', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            padding: 20px 10px;
+            overflow: hidden;
+        }
+
+        .header-zone {
+            text-align: center;
+            width: 100%;
+        }
+        .title {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        .decoration-line {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            white-space: nowrap;
+        }
+
+        .main-container {
+            display: flex;
+            width: 100%;
+            max-width: 500px;
+            background-color: #000000;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        .player-panel {
+            background-color: #D3D3D3; 
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+            padding: 20px 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #000000;
+            border-radius: 40px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .canvas-container.theme-white {
+            background-color: #ffffff;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 録音中の残り時間タイマー表示 */
+        .timer-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.2rem;
+            color: #ff0844;
+            display: none; /* 録音中だけJSで表示する */
+        }
+
+        .top-icons, .bottom-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            color: #4A5568;
+            font-size: 1.2rem;
+            margin-top: 15px;
+        }
+        .top-icons span, .bottom-controls span { cursor: pointer; transition: transform 0.1s; }
+        .top-icons span:active, .bottom-controls span:active { transform: scale(0.9); }
+        
+        /* 録音中・保存可能状態のボタン色変化 */
+        #recBtn.recording { color: #ff0844; }
+        #downloadBtn.ready { color: #00f2fe; }
+
+        .bottom-controls { font-size: 1.4rem; }
+        .play-pause-btn { font-size: 1.8rem; }
+
+        .seekbar-container {
+            width: 100%;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+        .seekbar {
+            width: 100%;
+            accent-color: #A0AEC0;
+        }
+
+        .side-panel {
+            width: 120px;
+            padding: 10px 0 10px 15px;
+            display: flex;
+            flex-direction: column;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        .setting-section {
+            margin-bottom: 20px;
+        }
+        .setting-title {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 3px;
+        }
+        .color-option {
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .color-option.active {
+            opacity: 1;
+        }
+        .pointer {
+            visibility: hidden;
+            margin-right: 5px;
+        }
+        .color-option.active .pointer {
+            visibility: visible;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 90px;
+        }
+        
+        .palette-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .palette-circle.selected {
+            border-color: #ffffff;
+            transform: scale(1.1);
+        }
+        
+        .p1 { background: linear-gradient(135deg, #fff3b0, #cae7e3); }
+        .p2 { background: linear-gradient(135deg, #a8ff78, #78ffd6); }
+        .p3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .p4 { background: linear-gradient(135deg, #ff0844, #ffb199); }
+        .p5 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
+        .p6 { background: linear-gradient(135deg, #13547a, #80d0c7); }
+
+        .footer-zone {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            width: 100%;
+            text-align: right;
+            padding-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-zone">
+        <div class="title">2min VOICE and MUSIC WAVE MOVIE</div>
+        <div class="decoration-line">。.：★*・゜・✧.・☆.*Ø・.・゜◎.。・*★**・.✧.・☆.*Ø・.・゜◎.。</div>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="player-panel">
+            <div id="canvasBg" class="canvas-container">
+                <canvas id="waveCanvas" width="600" height="600"></canvas>
+                <div id="timer" class="timer-display">02:00</div>
+            </div>
+            
+            <div class="top-icons">
+                <span id="downloadBtn" title="ダウンロード">📩</span>
+                <span>↩️</span>
+                <span>⏸️</span>
+                <span id="stopBtn" title="停止">⏹️</span>
+                <span id="recBtn" title="録音開始">⚪</span>
+            </div>
+
+            <div class="seekbar-container">
+                <input type="range" class="seekbar" value="0" min="0" max="100">
+            </div>
+
+            <div class="bottom-controls">
+                <span>⏮️</span>
+                <span>⏪</span>
+                <span class="play-pause-btn">⏸️</span>
+                <span>⏩</span>
+                <span>⏭️</span>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="setting-section">
+                <div class="setting-title">BACK COLOR</div>
+                <div id="btnBlack" class="color-option active">
+                    <span class="pointer">▶</span>BLACK
+                </div>
+                <div id="btnWhite" class="color-option">
+                    <span class="pointer">▶</span>WHITE
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <div class="setting-title">WAVE COLOR</div>
+                <div class="palette-grid">
+                    <div class="palette-circle p1 selected" data-colors='["#fff3b0", "#cae7e3"]'></div>
+                    <div class="palette-circle p2" data-colors='["#a8ff78", "#78ffd6"]'></div>
+                    <div class="palette-circle p3" data-colors='["#4facfe", "#00f2fe"]'></div>
+                    <div class="palette-circle p4" data-colors='["#ff0844", "#ffb199"]'></div>
+                    <div class="palette-circle p5" data-colors='["#f107a3", "#7b2ff7"]'></div>
+                    <div class="palette-circle p6" data-colors='["#13547a", "#80d0c7"]'></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer-zone">
+        @mi11emint
+    </div>
+
+    <script>
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 各種ボタン・表示要素の取得
+        const recBtn = document.getElementById('recBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const timerDisplay = document.getElementById('timer');
+        const canvasBg = document.getElementById('canvasBg');
+        const btnBlack = document.getElementById('btnBlack');
+        const btnWhite = document.getElementById('btnWhite');
+        const palettes = document.querySelectorAll('.palette-circle');
+        
+        // 音声・録画関連の変数
+        let audioCtx, analyser, source, dataArray, stream;
+        let animationId;
+        let mediaRecorder;
+        let recordedChunks = []; // 録画データを溜める配列
+        let videoUrl = null;
+        
+        // タイマー用の変数
+        let timerInterval;
+        let timeLeft = 120; // 2分 = 120秒
+
+        let currentBgColor = 'black';
+        let currentWaveColors = ["#fff3b0", "#cae7e3"];
+
+        // 初期描画
+        drawStaticCircle();
+
+        // --- 背景色・カラーパレット切り替え ---
+        btnBlack.addEventListener('click', () => {
+            currentBgColor = 'black';
+            btnBlack.classList.add('active');
+            btnWhite.classList.remove('active');
+            canvasBg.classList.remove('theme-white');
+            if (!audioCtx) drawStaticCircle();
+        });
+
+        btnWhite.addEventListener('click', () => {
+            currentBgColor = 'white';
+            btnWhite.classList.add('active');
+            btnBlack.classList.remove('active');
+            canvasBg.classList.add('theme-white');
+            if (!audioCtx) drawStaticCircle();
+        });
+
+        palettes.forEach(palette => {
+            palette.addEventListener('click', () => {
+                palettes.forEach(p => p.classList.remove('selected'));
+                palette.classList.add('selected');
+                currentWaveColors = JSON.parse(palette.dataset.colors);
+                if (!audioCtx) drawStaticCircle();
+            });
+        });
+
+        function clearCanvas() {
+            ctx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawStaticCircle() {
+            clearCanvas();
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const baseRadius = 140;
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, currentWaveColors[0]);
+            gradient.addColorStop(1, currentWaveColors[1]);
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // --- 📋 録音・録画スタート機能 ---
+        recBtn.addEventListener('click', async () => {
+            // すでに録音中なら何もしない
+            if (mediaRecorder && mediaRecorder.state === "recording") return;
+
+            try {
+                // 1. マイク音声の取得
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Web Audio APIのセットアップ（波形用）
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                draw(); // 波形描画スタート
+
+                // 2. 録画ストリームの合成（Canvas映像 + マイク音声）
+                // 容量削減のため、映像のフレームレートを30fpsに制限
+                const canvasStream = canvas.captureStream(30); 
+                const combinedStream = new MediaStream([
+                    ...canvasStream.getVideoTracks(),
+                    ...stream.getAudioTracks()
+                ]);
+
+                // 3. MediaRecorderの準備（高音質かつ軽量なwebm形式）
+                recordedChunks = [];
+                const options = {
+                    mimeType: 'video/webm;codecs=vp9,opus',
+                    videoBitsPerSecond: 1000000, // 1Mbps (正方形のシンプルな線なので十分綺麗)
+                    audioBitsPerSecond: 128000   // 128kbps (高音質なステレオ/モノラル音声)
+                };
+                
+                mediaRecorder = new MediaRecorder(combinedStream, options);
+
+                // データが送られてきたら配列に溜める
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                // 録画終了時の処理
+                mediaRecorder.onstop = () => {
+                    // 溜まったデータから動画URLを生成
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    videoUrl = URL.createObjectURL(blob);
+                    
+                    // ダウンロードアイコンをアクティブ（水色）にする
+                    downloadBtn.classList.add('ready');
+                    alert("録音が終了しました！📩マークを押して保存できます。");
+                };
+
+                // 録画スタート
+                mediaRecorder.start();
+                
+                // UIの変更（録音ボタンを赤く、タイマーを表示）
+                recBtn.classList.add('recording');
+                downloadBtn.classList.remove('ready');
+                timerDisplay.style.display = 'block';
+                
+                // タイマー開始
+                timeLeft = 120;
+                updateTimerText();
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimerText();
+                    if (timeLeft <= 0) {
+                        stopRecording(); // 2分経ったら自動停止
+                    }
+                }, 1000);
+
+            } catch (err) {
+                alert("マイクの起動、または録音に失敗しました: " + err);
+            }
+        });
+
+        // --- ⏹️ 録音ストップ機能 ---
+        stopBtn.addEventListener('click', () => {
+            stopRecording();
+        });
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop(); // 録画ストップ（onstopイベントが走る）
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop()); // マイクをオフにする
+            }
+            clearInterval(timerInterval); // タイマーを止める
+            
+            // UIを元に戻す
+            recBtn.classList.remove('recording');
+            timerDisplay.style.display = 'none';
+        }
+
+        // タイマーの文字を「02:00」のような形式に更新する関数
+        function updateTimerText() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // --- 📩 保存（ダウンロード）機能 ---
+        downloadBtn.addEventListener('click', () => {
+            if (!videoUrl) {
+                alert("まだ録音された動画がありません。先に⚪ボタンで録音してください。");
+                return;
+            }
+            // 擬似的にリンクを作ってクリックさせ、保存ダイアログを開く
+            const a = document.createElement('a');
+            a.href = videoUrl;
+            a.download = `voice-wave-${Date.now()}.webm`; // ファイル名
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        // リアルタイム波形描画ループ
+        function draw() {
+            if (!audioCtx) return;
+            animationId = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+            
+            clearCanvas();
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const baseRadius = 140;
+            
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, currentWaveColors[0]);
+            gradient.addColorStop(1, currentWaveColors[1]);
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            
+            const points = dataArray.length;
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2;
+                const audioValue = dataArray[i] / 255; 
+                const waveLength = audioValue * 90; 
+                
+                const startX = centerX + Math.cos(angle) * baseRadius;
+                const startY = centerY + Math.sin(angle) * baseRadius;
+                const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+                const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>
