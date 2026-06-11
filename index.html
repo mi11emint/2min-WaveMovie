@@ -7,7 +7,6 @@
     <style>
         @font-face {
             font-family: 'Cinecaption';
-            /* 予備対策として直接参照用の ?raw=1 に修正 */
             src: url('https://dl.dropboxusercontent.com/scl/fi/gbyay8c3as3f0l2e2q2un/cinecaption_2.28.woff2?rlkey=pgaofit9g6699gsww2m3p9l7b&raw=1') format('woff2');
             font-display: swap;
         }
@@ -27,7 +26,6 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px 10px;
-            /* 画面内に収まらない場合にスクロールできるよう変更 */
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -37,13 +35,13 @@
             height: 20px;
         }
 
-        /* 📋 新設：説明書き専用のスタイル（スマホでも読みやすいサイズに固定） */
+        /* 📋 説明書き専用：さらに一回り小さく繊細なサイズに調整 */
         .info-text-area {
             width: 100%;
             max-width: 500px;
-            text-align: left; /* 左寄せ */
-            font-size: 0.8rem; /* 読みやすい大きさに調整 */
-            line-height: 1.5;
+            text-align: left;
+            font-size: 0.75rem; /* 0.8remからさらに少し小さく */
+            line-height: 1.6;
             letter-spacing: 1px;
             opacity: 0.8;
             margin-bottom: 12px;
@@ -51,15 +49,15 @@
         }
 
         .info-attention {
-            margin-top: 12px;
-            margin-bottom: 12px;
-            opacity: 0.8;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            opacity: 0.7;
         }
 
         .info-brand {
             margin-top: 15px;
             letter-spacing: 2px;
-            text-align: right; /* 右寄せ */
+            text-align: right;
         }
 
         .header-zone {
@@ -68,15 +66,14 @@
             margin-bottom: 10px;
         }
         .title {
-            font-size: 1.4rem;
+            font-size: 1.25rem; /* 小さくしてバランスを調整 */
             letter-spacing: 2px;
             margin-bottom: 5px;
         }
         
-        /* ✨ キラキラライン専用のサイズ設定 */
         .decoration-line {
-            font-size: 0.8rem;
-            opacity: 0.8;
+            font-size: 0.75rem;
+            opacity: 0.7;
             white-space: nowrap;
             line-height: 1.5;
         }
@@ -91,9 +88,10 @@
             margin: 10px 0 20px 0;
         }
 
-        /* プレイヤー全体のパネル */
+        /* プレイヤー全体のパネル（背景画像 bg-player.png を適用） */
         .player-panel {
-            background-color: #D3D3D3; 
+            background-image: url('https://vvrl.cc/jp/j7ua6d'); 
+            background-color: #D3D3D3; /* 読み込み前のフォールバック */
             border-top-left-radius: 10px;
             border-bottom-left-radius: 10px;
             padding: 20px 15px;
@@ -159,7 +157,6 @@
         .top-icons span, .bottom-controls span { 
             cursor: pointer; 
             transition: transform 0.1s;
-            padding: 5px; 
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -168,12 +165,15 @@
         }
         .top-icons span:active, .bottom-controls span:active { transform: scale(0.8); }
         
+        /* 🖼️ ボタン画像用スタイル設定 */
         .btn-img {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            pointer-events: none; /* ボタン自体のクリックイベントを邪魔しないように */
         }
 
+        /* 下段中央の「再生/一時停止」専用サイズ */
         .bottom-controls .play-pause-btn {
             width: 50px;
             height: 50px;
@@ -197,7 +197,7 @@
             padding: 10px 0 10px 15px;
             display: flex;
             flex-direction: column;
-            font-size: 0.9rem;
+            font-size: 0.8rem; /* 少し小さく繊細に */
             letter-spacing: 1px;
             justify-content: center;
         }
@@ -206,7 +206,7 @@
         }
         .setting-title {
             margin-bottom: 12px;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             padding-bottom: 3px;
         }
@@ -255,14 +255,6 @@
         .p4 { background: linear-gradient(135deg, #ff0844, #ffb199); }
         .p5 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
         .p6 { background: linear-gradient(135deg, #13547a, #80d0c7); }
-
-        .footer-zone {
-            font-size: 0.9rem;
-            opacity: 0.7;
-            width: 100%;
-            text-align: right;
-            padding: 10px;
-        }
     </style>
 </head>
 <body>
@@ -278,10 +270,7 @@
         <p>告知なくサービスを変更・停止することがあります</p>
         
         <p class="info-attention">声が盗られるとか、そういうのはないです</p>
-                <p class="info-brand">にふなみ　２分のあなたの音の波<br>
-                @mi11emint</p>
-        
-              <div class="footer-zone"> </div>
+        <p class="info-brand">にふなみ　２分のあなたの音の波<br>@mi11emint</p>
     </div>
 
     <div class="header-zone">
@@ -301,11 +290,11 @@
             </div>
             
             <div class="top-icons">
-                <span id="downloadBtn" title="ダウンロード">📩</span>
-                <span id="resetBtn" title="最初からやり直す（リセット）">↩️</span>
-                <span id="topPauseBtn">⏸️</span>
-                <span id="stopBtn" title="録音停止">⏹️</span>
-                <span id="recBtn" title="録音開始">⚪</span>
+                <span id="downloadBtn" title="ダウンロード"><img src="https://vvrl.cc/jp/ked1wa" class="btn-img" alt="DL"></span>
+                <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://vvrl.cc/jp/j27uag" class="btn-img" alt="リセット"></span>
+                <span id="topPauseBtn" title="録音一時停止"><img src="https://vvrl.cc/jp/kf4rfo" class="btn-img" alt="一時停止"></span>
+                <span id="stopBtn" title="録音停止"><img src="https://vvrl.cc/jp/ic8ezj" class="btn-img" alt="停止"></span>
+                <span id="recBtn" title="録音開始"><img src="https://vvrl.cc/jp/my251m" class="btn-img" alt="録音"></span>
             </div>
 
             <div class="seekbar-container">
@@ -313,11 +302,11 @@
             </div>
 
             <div class="bottom-controls">
-                <span id="skipBackBtn">⏮️</span>
-                <span id="rewindBtn">⏪</span>
-                <span id="playPauseBtn" class="play-pause-btn">▶️</span>
-                <span id="forwardBtn">⏩</span>
-                <span id="skipForwardBtn">⏭️</span>
+                <span id="skipBackBtn" title="最初に戻る"><img src="https://vvrl.cc/jp/it757p" class="btn-img" alt="最初へ"></span>
+                <span id="rewindBtn" title="5秒巻き戻し"><img src="https://vvrl.cc/jp/mtp9t1" class="btn-img" alt="巻き戻し"></span>
+                <span id="playPauseBtn" class="play-pause-btn" title="再生"><img src="https://vvrl.cc/jp/ms8bl3" class="btn-img" id="playPauseImg" alt="再生"></span>
+                <span id="forwardBtn" title="5秒早送り"><img src="https://vvrl.cc/jp/m2jjh3" class="btn-img" alt="早送り"></span>
+                <span id="skipForwardBtn" title="最後へ進む"><img src="https://vvrl.cc/jp/jhqe4o" class="btn-img" alt="最後へ"></span>
             </div>
         </div>
 
@@ -363,12 +352,17 @@
         const palettes = document.querySelectorAll('.palette-circle');
         
         const playPauseBtn = document.getElementById('playPauseBtn');
+        const playPauseImg = document.getElementById('playPauseImg'); // 📋 画像切り替え用に追加
         const seekBar = document.getElementById('seekBar');
         const skipBackBtn = document.getElementById('skipBackBtn');
         const rewindBtn = document.getElementById('rewindBtn');
         const forwardBtn = document.getElementById('forwardBtn');
         const skipForwardBtn = document.getElementById('skipForwardBtn');
         
+        // 画像パス定数
+        const IMG_PLAY = "https://vvrl.cc/jp/ms8bl3";
+        const IMG_PAUSE = "https://vvrl.cc/jp/g2g9d2";
+
         let audioCtx, analyser, source, dataArray, stream;
         let animationId;
         let mediaRecorder;
@@ -473,7 +467,7 @@
                     canvas.style.display = 'none'; 
                     
                     downloadBtn.classList.add('ready');
-                    playPauseBtn.innerText = "▶️";
+                    playPauseImg.src = IMG_PLAY; // 📋 録音停止時は再生用画像にリセット
                 };
 
                 mediaRecorder.start();
@@ -493,7 +487,7 @@
                 }, 1000);
 
             } catch (err) {
-                alert("マイクの起動に失敗しました: " + err);
+                alert("マイクの起動に失敗しました。端末の設定もご確認ください: " + err);
             }
         });
 
@@ -525,7 +519,7 @@
         resetBtn.addEventListener('click', () => {
             if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
                 resetDataWithoutPrompt();
-                alert("リセットしました。録音ボタンを押すと新しく録音できます。");
+                alert("リセットしました。録音ボタンを押すと新しく録音できます^.ˬ.^ฅⳊ");
             }
         });
 
@@ -540,7 +534,7 @@
             canvas.style.display = 'block';
             
             seekBar.value = 0;
-            playPauseBtn.innerText = "▶️"; 
+            playPauseImg.src = IMG_PLAY; // 📋 リセット時も再生用画像に戻す
             downloadBtn.classList.remove('ready');
             
             if (animationId) cancelAnimationFrame(animationId);
@@ -550,7 +544,7 @@
 
         downloadBtn.addEventListener('click', () => {
             if (!videoUrl) {
-                alert("保存する動画がありません。先に録音を完了させてください。");
+                alert("保存する動画がありません。先に○ボタンから録音を完了させてください。");
                 return;
             }
             const a = document.createElement('a');
@@ -569,10 +563,10 @@
             
             if (video.paused) {
                 video.play();
-                playPauseBtn.innerText = "⏸️"; 
+                playPauseImg.src = IMG_PAUSE; // 📋 再生中は一時停止画像（btn-pause-bottom.png）に
             } else {
                 video.pause();
-                playPauseBtn.innerText = "▶️"; 
+                playPauseImg.src = IMG_PLAY; // 📋 一時停止時は再生画像（btn-play.png）に
             }
         });
 
@@ -588,7 +582,7 @@
         });
 
         video.addEventListener('ended', () => {
-            playPauseBtn.innerText = "▶️"; 
+            playPauseImg.src = IMG_PLAY; // 📋 再生終了時は再生用画像に戻す
             video.currentTime = 0;
             seekBar.value = 0;
         });
