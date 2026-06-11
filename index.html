@@ -88,10 +88,10 @@
             margin: 10px 0 20px 0;
         }
 
-        /* プレイヤー全体のパネル（新しい背景画像 URL へ変更） */
+        /* プレイヤー全体のパネル */
         .player-panel {
-            background-image: url('https://vvrl.cc/jp/kk27gt'); 
-            background-color: #D3D3D3;
+            background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg'); 
+            background-color: silver;
             border-top-left-radius: 10px;
             border-bottom-left-radius: 10px;
             padding: 20px 15px;
@@ -138,10 +138,10 @@
 
         .timer-display {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 1.2rem;
-            color: #ff0844;
+            top: 15px;
+            right: 15px;
+            font-size: 0.9rem;
+            color: #ff4488;
             display: none;
             z-index: 10;
         }
@@ -154,14 +154,26 @@
             margin-top: 15px;
         }
         
-        .top-icons span, .bottom-controls span { 
+        /* 🔍 シークバーの上の5つのボタン：さらに10%縮小（25px） */
+        .top-icons span { 
             cursor: pointer; 
             transition: transform 0.1s;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
+            width: 25px;
+            height: 25px;
+        }
+        
+        /* 🔍 下段のボタン：前回のサイズ（28px）をキープ */
+        .bottom-controls span { 
+            cursor: pointer; 
+            transition: transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
         }
         .top-icons span:active, .bottom-controls span:active { transform: scale(0.8); }
         
@@ -173,10 +185,10 @@
             pointer-events: none;
         }
 
-        /* 下段中央の「再生/一時停止」専用サイズ */
+        /* 下段中央の「再生/一時停止」専用サイズ（35px） */
         .bottom-controls .play-pause-btn {
-            width: 50px;
-            height: 50px;
+            width: 35px;
+            height: 35px;
         }
 
         .seekbar-container {
@@ -255,6 +267,7 @@
         .p4 { background: linear-gradient(135deg, #ff0844, #ffb199); }
         .p5 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
         .p6 { background: linear-gradient(135deg, #13547a, #80d0c7); }
+        
     </style>
 </head>
 <body>
@@ -290,11 +303,11 @@
             </div>
             
             <div class="top-icons">
-                <span id="downloadBtn" title="ダウンロード"><img src="https://vvrl.cc/jp/ked1wa" class="btn-img" alt="DL"></span>
-                <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://vvrl.cc/jp/j27uag" class="btn-img" alt="リセット"></span>
-                <span id="topPauseBtn" title="録音一時停止"><img src="https://vvrl.cc/jp/kf4rfo" class="btn-img" alt="一時停止"></span>
-                <span id="stopBtn" title="録音停止"><img src="https://vvrl.cc/jp/ic8ezj" class="btn-img" alt="停止"></span>
-                <span id="recBtn" title="録音開始"><img src="https://vvrl.cc/jp/my251m" class="btn-img" alt="録音"></span>
+                <span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
+                <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
+                <span id="topPauseBtn" title="録音一時停止"><img src="https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png" class="btn-img" alt="一時停止"></span>
+                <span id="stopBtn" title="録音停止"><img src="https://img1.mitemin.net/aq/o0/hcbj1ot13v3khand2j5c6jbf3yan_ywe_3c_3c_g9i.png" class="btn-img" alt="停止"></span>
+                <span id="recBtn" title="録音開始"><img src="https://img1.mitemin.net/3b/lr/2ql3dcgbdt6s9skvmfdso1m8621_ema_3c_3c_jwr.png" class="btn-img" alt="録音"></span>
             </div>
 
             <div class="seekbar-container">
@@ -302,11 +315,11 @@
             </div>
 
             <div class="bottom-controls">
-                <span id="skipBackBtn" title="最初に戻る"><img src="https://vvrl.cc/jp/it757p" class="btn-img" alt="最初へ"></span>
-                <span id="rewindBtn" title="5秒巻き戻し"><img src="https://vvrl.cc/jp/mtp9t1" class="btn-img" alt="巻き戻し"></span>
-                <span id="playPauseBtn" class="play-pause-btn" title="再生"><img src="https://30549.mitemin.net/i1177931/" class="btn-img" id="playPauseImg" alt="再生"></span>
-                <span id="forwardBtn" title="5秒早送り"><img src="https://vvrl.cc/jp/m2jjh3" class="btn-img" alt="早送り"></span>
-                <span id="skipForwardBtn" title="最後へ進む"><img src="https://vvrl.cc/jp/jhqe4o" class="btn-img" alt="最後へ"></span>
+                <span id="skipBackBtn" title="最初に戻る"><img src="https://img1.mitemin.net/af/ep/cwym991ba50gcp3zi6x0ku9fjo3f_fsm_3c_3c_hl1.png" class="btn-img" alt="最初へ"></span>
+                <span id="rewindBtn" title="5秒巻き戻し"><img src="https://img1.mitemin.net/1c/qz/8jijkxjwk4m7ajbzfjmpcpr87rs8_x51_3k_3k_l6f.png" class="btn-img" alt="巻き戻し"></span>
+                <span id="playPauseBtn" class="play-pause-btn" title="再生"><img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" class="btn-img" id="playPauseImg" alt="再生"></span>
+                <span id="forwardBtn" title="5秒早送り"><img src="https://img1.mitemin.net/94/ws/dbbi27fj9pcx94f7gio3i2wd73d6_5ay_3k_3k_kzk.png" class="btn-img" alt="早送り"></span>
+                <span id="skipForwardBtn" title="最後へ進む"><img src="https://img1.mitemin.net/4j/o9/jpoaf9zmbkn3e3bl5lt2ig72d2v8_15qg_3c_3c_htq.png" class="btn-img" alt="最後へ"></span>
             </div>
         </div>
 
@@ -359,8 +372,9 @@
         const forwardBtn = document.getElementById('forwardBtn');
         const skipForwardBtn = document.getElementById('skipForwardBtn');
         
-        const IMG_PLAY = "https://vvrl.cc/jp/ms8bl3";
-        const IMG_PAUSE = "https://vvrl.cc/jp/g2g9d2";
+        const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
+        /* 🔄 新しい一時停止マークのURLに変更しました */
+        const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
 
         let audioCtx, analyser, source, dataArray, stream;
         let animationId;
