@@ -90,11 +90,11 @@
             margin: 10px 0 20px 0;
         }
 
-        /* プレイヤー全体のパネル（🔍 修正：左側の丸みを削除して完全な直角に） */
+        /* プレイヤー全体のパネル */
         .player-panel {
             background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg'); 
             background-color: silver;
-            border-radius: 0; /* 🔍 直角化 */
+            border-radius: 0; 
             padding: 15px 15px; 
             flex: 1;
             display: flex;
@@ -110,7 +110,7 @@
             width: 100%;
             aspect-ratio: 1 / 1;
             background-color: #000000;
-            border-radius: 40px; /* 内側の丸窓の可愛い丸みはそのままキープ */
+            border-radius: 40px; 
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -205,7 +205,7 @@
             cursor: pointer;
         }
 
-        /* 📜 右側サイドパネル（内部スクロール可能＆🔍 修正：四隅直角に統一） */
+        /* 📜 右側サイドパネル */
         .side-panel {
             width: 145px; 
             padding: 2px 10px 10px 15px; 
@@ -217,7 +217,7 @@
             overflow-y: auto; 
             height: 100%;
             scrollbar-width: none; 
-            border-radius: 0; /* 🔍 完全な直角にリセット */
+            border-radius: 0; 
         }
         .side-panel::-webkit-scrollbar {
             display: none; 
@@ -567,7 +567,14 @@
             resetDataWithoutPrompt();
 
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // 🎧 マイク入力自体のクオリティ設定も向上
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false, // 音楽的表現のためにエコー除去をオフ
+                        noiseSuppression: false,  // 音質劣化を防ぐためノイズ抑制をオフ
+                        autoGainControl: false   // 勝手に音量調整されるのを防ぐ
+                    } 
+                });
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
                 source = audioCtx.createMediaStreamSource(stream);
@@ -614,10 +621,12 @@
                 ]);
 
                 recordedChunks = [];
+                
+                // 🔍 修正：音声と映像のビットレートを限界まで引き上げ（超高品質設定）
                 const options = {
                     mimeType: 'video/webm;codecs=vp9,opus',
-                    videoBitsPerSecond: 1000000,
-                    audioBitsPerSecond: 128000
+                    videoBitsPerSecond: 2500000, // 映像ビットレートを 2.5Mbps に向上
+                    audioBitsPerSecond: 320000   // 🎧 音声ビットレートを最高峰の 320kbps に設定！
                 };
                 
                 mediaRecorder = new MediaRecorder(combinedStream, options);
