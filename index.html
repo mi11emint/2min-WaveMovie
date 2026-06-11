@@ -40,7 +40,7 @@
             width: 100%;
             max-width: 500px;
             text-align: left;
-            font-size: 0.75rem; /* 0.8remからさらに少し小さく */
+            font-size: 0.75rem;
             line-height: 1.6;
             letter-spacing: 1px;
             opacity: 0.8;
@@ -66,7 +66,7 @@
             margin-bottom: 10px;
         }
         .title {
-            font-size: 1.25rem; /* 小さくしてバランスを調整 */
+            font-size: 1.25rem;
             letter-spacing: 2px;
             margin-bottom: 5px;
         }
@@ -88,10 +88,10 @@
             margin: 10px 0 20px 0;
         }
 
-        /* プレイヤー全体のパネル（背景画像 bg-player.png を適用） */
+        /* プレイヤー全体のパネル（新しい背景画像 URL へ変更） */
         .player-panel {
-            background-image: url('https://vvrl.cc/jp/j7ua6d'); 
-            background-color: #D3D3D3; /* 読み込み前のフォールバック */
+            background-image: url('https://vvrl.cc/jp/kk27gt'); 
+            background-color: #D3D3D3;
             border-top-left-radius: 10px;
             border-bottom-left-radius: 10px;
             padding: 20px 15px;
@@ -170,7 +170,7 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            pointer-events: none; /* ボタン自体のクリックイベントを邪魔しないように */
+            pointer-events: none;
         }
 
         /* 下段中央の「再生/一時停止」専用サイズ */
@@ -197,7 +197,7 @@
             padding: 10px 0 10px 15px;
             display: flex;
             flex-direction: column;
-            font-size: 0.8rem; /* 少し小さく繊細に */
+            font-size: 0.8rem;
             letter-spacing: 1px;
             justify-content: center;
         }
@@ -304,7 +304,7 @@
             <div class="bottom-controls">
                 <span id="skipBackBtn" title="最初に戻る"><img src="https://vvrl.cc/jp/it757p" class="btn-img" alt="最初へ"></span>
                 <span id="rewindBtn" title="5秒巻き戻し"><img src="https://vvrl.cc/jp/mtp9t1" class="btn-img" alt="巻き戻し"></span>
-                <span id="playPauseBtn" class="play-pause-btn" title="再生"><img src="https://vvrl.cc/jp/ms8bl3" class="btn-img" id="playPauseImg" alt="再生"></span>
+                <span id="playPauseBtn" class="play-pause-btn" title="再生"><img src="https://30549.mitemin.net/i1177931/" class="btn-img" id="playPauseImg" alt="再生"></span>
                 <span id="forwardBtn" title="5秒早送り"><img src="https://vvrl.cc/jp/m2jjh3" class="btn-img" alt="早送り"></span>
                 <span id="skipForwardBtn" title="最後へ進む"><img src="https://vvrl.cc/jp/jhqe4o" class="btn-img" alt="最後へ"></span>
             </div>
@@ -352,14 +352,13 @@
         const palettes = document.querySelectorAll('.palette-circle');
         
         const playPauseBtn = document.getElementById('playPauseBtn');
-        const playPauseImg = document.getElementById('playPauseImg'); // 📋 画像切り替え用に追加
+        const playPauseImg = document.getElementById('playPauseImg'); 
         const seekBar = document.getElementById('seekBar');
         const skipBackBtn = document.getElementById('skipBackBtn');
         const rewindBtn = document.getElementById('rewindBtn');
         const forwardBtn = document.getElementById('forwardBtn');
         const skipForwardBtn = document.getElementById('skipForwardBtn');
         
-        // 画像パス定数
         const IMG_PLAY = "https://vvrl.cc/jp/ms8bl3";
         const IMG_PAUSE = "https://vvrl.cc/jp/g2g9d2";
 
@@ -467,7 +466,7 @@
                     canvas.style.display = 'none'; 
                     
                     downloadBtn.classList.add('ready');
-                    playPauseImg.src = IMG_PLAY; // 📋 録音停止時は再生用画像にリセット
+                    playPauseImg.src = IMG_PLAY;
                 };
 
                 mediaRecorder.start();
@@ -534,7 +533,7 @@
             canvas.style.display = 'block';
             
             seekBar.value = 0;
-            playPauseImg.src = IMG_PLAY; // 📋 リセット時も再生用画像に戻す
+            playPauseImg.src = IMG_PLAY; 
             downloadBtn.classList.remove('ready');
             
             if (animationId) cancelAnimationFrame(animationId);
@@ -563,10 +562,10 @@
             
             if (video.paused) {
                 video.play();
-                playPauseImg.src = IMG_PAUSE; // 📋 再生中は一時停止画像（btn-pause-bottom.png）に
+                playPauseImg.src = IMG_PAUSE; 
             } else {
                 video.pause();
-                playPauseImg.src = IMG_PLAY; // 📋 一時停止時は再生画像（btn-play.png）に
+                playPauseImg.src = IMG_PLAY; 
             }
         });
 
@@ -582,7 +581,7 @@
         });
 
         video.addEventListener('ended', () => {
-            playPauseImg.src = IMG_PLAY; // 📋 再生終了時は再生用画像に戻す
+            playPauseImg.src = IMG_PLAY; 
             video.currentTime = 0;
             seekBar.value = 0;
         });
