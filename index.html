@@ -35,7 +35,7 @@
             height: 20px;
         }
 
-        /* 📋 説明書き専用：さらに一回り小さく繊細なサイズに調整 */
+        /* 📋 説明書き専用 */
         .info-text-area {
             width: 100%;
             max-width: 500px;
@@ -78,23 +78,24 @@
             line-height: 1.5;
         }
 
+        /* 🔒 メインコンテナの縦幅を400pxに固定 */
         .main-container {
             display: flex;
             width: 100%;
-            max-width: 500px;
+            max-width: 525px; 
+            height: 400px;    
             background-color: #000000;
             align-items: stretch;
             justify-content: center;
             margin: 10px 0 20px 0;
         }
 
-        /* プレイヤー全体のパネル */
+        /* プレイヤー全体のパネル（🔍 修正：左側の丸みを削除して完全な直角に） */
         .player-panel {
             background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg'); 
             background-color: silver;
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px;
-            padding: 20px 15px;
+            border-radius: 0; /* 🔍 直角化 */
+            padding: 15px 15px; 
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -102,13 +103,14 @@
             justify-content: space-between;
             background-size: cover;
             background-position: center;
+            height: 100%;
         }
 
         .canvas-container {
             width: 100%;
             aspect-ratio: 1 / 1;
             background-color: #000000;
-            border-radius: 40px;
+            border-radius: 40px; /* 内側の丸窓の可愛い丸みはそのままキープ */
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -151,10 +153,10 @@
             justify-content: space-around;
             align-items: center;
             width: 100%;
-            margin-top: 15px;
+            margin-top: 10px;
         }
         
-        /* 🔍 シークバーの上の5つのボタン：さらに10%縮小（25px） */
+        /* 上段5つのボタン（25px） */
         .top-icons span { 
             cursor: pointer; 
             transition: transform 0.1s;
@@ -165,7 +167,7 @@
             height: 25px;
         }
         
-        /* 🔍 下段のボタン：前回のサイズ（28px）をキープ */
+        /* 下段のボタン（28px） */
         .bottom-controls span { 
             cursor: pointer; 
             transition: transform 0.1s;
@@ -177,7 +179,6 @@
         }
         .top-icons span:active, .bottom-controls span:active { transform: scale(0.8); }
         
-        /* 🖼️ ボタン画像用スタイル設定 */
         .btn-img {
             width: 100%;
             height: 100%;
@@ -185,45 +186,54 @@
             pointer-events: none;
         }
 
-        /* 下段中央の「再生/一時停止」専用サイズ（35px） */
+        /* 再生/一時停止（35px） */
         .bottom-controls .play-pause-btn {
             width: 35px;
             height: 35px;
         }
 
+        /* シークバー調整位置 */
         .seekbar-container {
             width: 100%;
-            margin: 15px 0;
+            margin: 15px 0 5px 0; 
             display: flex;
             align-items: center;
         }
         .seekbar {
             width: 100%;
-            accent-color: #4A5568;
+            accent-color: #777777;
             cursor: pointer;
         }
 
-        /* 右側サイドパネル */
+        /* 📜 右側サイドパネル（内部スクロール可能＆🔍 修正：四隅直角に統一） */
         .side-panel {
-            width: 120px;
-            padding: 10px 0 10px 15px;
+            width: 145px; 
+            padding: 2px 10px 10px 15px; 
             display: flex;
             flex-direction: column;
             font-size: 0.8rem;
             letter-spacing: 1px;
-            justify-content: center;
+            justify-content: flex-start;
+            overflow-y: auto; 
+            height: 100%;
+            scrollbar-width: none; 
+            border-radius: 0; /* 🔍 完全な直角にリセット */
         }
+        .side-panel::-webkit-scrollbar {
+            display: none; 
+        }
+
         .setting-section {
-            margin-bottom: 25px;
+            margin-bottom: 15px; 
         }
         .setting-title {
-            margin-bottom: 12px;
-            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             padding-bottom: 3px;
         }
         .color-option {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -241,11 +251,12 @@
             visibility: visible;
         }
 
+        /* 🎨 カラーパレット（4列・全16色） */
         .palette-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 90px;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 6px;
+            max-width: 115px;
         }
         
         .palette-circle {
@@ -260,13 +271,75 @@
             border-color: #ffffff;
             transform: scale(1.1);
         }
+
+        /* 🎛️ 音量・イコライザースライダー */
+        .control-group {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .control-label {
+            font-size: 0.65rem;
+            color: #ccc;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+        }
         
-        .p1 { background: linear-gradient(135deg, #fff3b0, #cae7e3); }
-        .p2 { background: linear-gradient(135deg, #a8ff78, #78ffd6); }
-        .p3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-        .p4 { background: linear-gradient(135deg, #ff0844, #ffb199); }
-        .p5 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
-        .p6 { background: linear-gradient(135deg, #13547a, #80d0c7); }
+        .audio-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: #444444; 
+            height: 4px;
+            border-radius: 2px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #888888;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .audio-slider::-webkit-slider-thumb:hover {
+            background: #aaaaaa;
+        }
+        .audio-slider::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #888888;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+        .audio-slider::-moz-range-thumb:hover {
+            background: #aaaaaa;
+        }
+        
+        /* 🎨 全16色グラデーション */
+        .p1 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
+        .p2 { background: linear-gradient(135deg, #f8f8ff, #b0c4de); }
+        .p3 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
+        .p4 { background: linear-gradient(135deg, #fff3b0, #cae7e3); }
+        .p5 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
+        .p6 { background: linear-gradient(135deg, #ff4e50, #f9d423); }
+        .p7 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
+        .p8 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
+        .p9 { background: linear-gradient(135deg, #dc143c, #8b0000); }
+        .p10 { background: linear-gradient(135deg, #800080, #f08080); }
+        .p11 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
+        .p12 { background: linear-gradient(135deg, #4b0082, #6495ed); }
+        .p13 { background: linear-gradient(135deg, #00008b, #00ffff); }
+        .p14 { background: linear-gradient(135deg, #8b5a2b, #2e8b57); }
+        .p15 { background: linear-gradient(135deg, #191970, #fffacd); }
+        .p16 { background: linear-gradient(135deg, #eeeeee, #111111); } 
         
     </style>
 </head>
@@ -337,12 +410,45 @@
             <div class="setting-section">
                 <div class="setting-title">WAVE COLOR</div>
                 <div class="palette-grid">
-                    <div class="palette-circle p1 selected" data-colors='["#fff3b0", "#cae7e3"]'></div>
-                    <div class="palette-circle p2" data-colors='["#a8ff78", "#78ffd6"]'></div>
-                    <div class="palette-circle p3" data-colors='["#4facfe", "#00f2fe"]'></div>
-                    <div class="palette-circle p4" data-colors='["#ff0844", "#ffb199"]'></div>
-                    <div class="palette-circle p5" data-colors='["#f107a3", "#7b2ff7"]'></div>
-                    <div class="palette-circle p6" data-colors='["#13547a", "#80d0c7"]'></div>
+                    <div class="palette-circle p1 selected" data-colors='["#fff0f5", "#faf0e6"]'></div>
+                    <div class="palette-circle p2" data-colors='["#f8f8ff", "#b0c4de"]'></div>
+                    <div class="palette-circle p3" data-colors='["#bc8f8f", "#ffe4e1"]'></div>
+                    <div class="palette-circle p4" data-colors='["#fff3b0", "#cae7e3"]'></div>
+                    <div class="palette-circle p5" data-colors='["#ffee00", "#ffaa00"]'></div>
+                    <div class="palette-circle p6" data-colors='["#ff4e50", "#f9d423"]'></div>
+                    <div class="palette-circle p7" data-colors='["#f0fff0", "#40e0d0"]'></div>
+                    <div class="palette-circle p8" data-colors='["#4682b4", "#f0f8ff"]'></div>
+                    <div class="palette-circle p9" data-colors='["#dc143c", "#8b0000"]'></div>
+                    <div class="palette-circle p10" data-colors='["#800080", "#f08080"]'></div>
+                    <div class="palette-circle p11" data-colors='["#f107a3", "#7b2ff7"]'></div>
+                    <div class="palette-circle p12" data-colors='["#4b0082", "#6495ed"]'></div>
+                    <div class="palette-circle p13" data-colors='["#00008b", "#00ffff"]'></div>
+                    <div class="palette-circle p14" data-colors='["#8b5a2b", "#2e8b57"]'></div>
+                    <div class="palette-circle p15" data-colors='["#191970", "#fffacd"]'></div>
+                    <div class="palette-circle p16" data-colors='["#eeeeee", "#111111"]'></div>
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <div class="setting-title">VOLUME</div>
+                <div class="control-group">
+                    <input type="range" id="volSlider" class="audio-slider" min="0" max="1.5" step="0.05" value="1.0">
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <div class="setting-title">EQUALIZER</div>
+                <div class="control-group">
+                    <div class="control-label"><span>LOW</span></div>
+                    <input type="range" id="eqLowSlider" class="audio-slider" min="-12" max="12" step="1" value="0">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>MID</span></div>
+                    <input type="range" id="eqMidSlider" class="audio-slider" min="-12" max="12" step="1" value="0">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>HIGH</span></div>
+                    <input type="range" id="eqHighSlider" class="audio-slider" min="-12" max="12" step="1" value="0">
                 </div>
             </div>
         </div>
@@ -371,9 +477,13 @@
         const rewindBtn = document.getElementById('rewindBtn');
         const forwardBtn = document.getElementById('forwardBtn');
         const skipForwardBtn = document.getElementById('skipForwardBtn');
+
+        const volSlider = document.getElementById('volSlider');
+        const eqLowSlider = document.getElementById('eqLowSlider');
+        const eqMidSlider = document.getElementById('eqMidSlider');
+        const eqHighSlider = document.getElementById('eqHighSlider');
         
         const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
-        /* 🔄 新しい一時停止マークのURLに変更しました */
         const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
 
         let audioCtx, analyser, source, dataArray, stream;
@@ -386,8 +496,10 @@
         let timeLeft = 120;
 
         let currentBgColor = 'black';
-        let currentWaveColors = ["#fff3b0", "#cae7e3"];
+        let currentWaveColors = ["#fff0f5", "#faf0e6"];
         let isUserChangingIndex = false;
+
+        let gainNode, eqLow, eqMid, eqHigh, recordDestination;
 
         drawStaticCircle();
 
@@ -414,6 +526,19 @@
                 currentWaveColors = JSON.parse(palette.dataset.colors);
                 if (!videoUrl) drawStaticCircle();
             });
+        });
+
+        volSlider.addEventListener('input', () => {
+            if (gainNode) gainNode.gain.value = volSlider.value;
+        });
+        eqLowSlider.addEventListener('input', () => {
+            if (eqLow) eqLow.gain.value = eqLowSlider.value;
+        });
+        eqMidSlider.addEventListener('input', () => {
+            if (eqMid) eqMid.gain.value = eqMidSlider.value;
+        });
+        eqHighSlider.addEventListener('input', () => {
+            if (eqHigh) eqHigh.gain.value = eqHighSlider.value;
         });
 
         function clearCanvas() {
@@ -444,10 +569,40 @@
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                source = audioCtx.createMediaStreamSource(stream);
+                
+                eqLow = audioCtx.createBiquadFilter();
+                eqLow.type = 'lowshelf';
+                eqLow.frequency.value = 320;
+                eqLow.gain.value = eqLowSlider.value;
+
+                eqMid = audioCtx.createBiquadFilter();
+                eqMid.type = 'peaking';
+                eqMid.Q.value = 1.0;
+                eqMid.frequency.value = 1000;
+                eqMid.gain.value = eqMidSlider.value;
+
+                eqHigh = audioCtx.createBiquadFilter();
+                eqHigh.type = 'highshelf';
+                eqHigh.frequency.value = 3200;
+                eqHigh.gain.value = eqHighSlider.value;
+
+                gainNode = audioCtx.createGain();
+                gainNode.gain.value = volSlider.value;
+
                 analyser = audioCtx.createAnalyser();
                 analyser.fftSize = 256;
-                source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser);
+
+                recordDestination = audioCtx.createMediaStreamDestination();
+
+                source.connect(eqLow);
+                eqLow.connect(eqMid);
+                eqMid.connect(eqHigh);
+                eqHigh.connect(gainNode);
+                gainNode.connect(analyser); 
+                gainNode.connect(recordDestination); 
+
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
                 draw();
@@ -455,7 +610,7 @@
                 const canvasStream = canvas.captureStream(30); 
                 const combinedStream = new MediaStream([
                     ...canvasStream.getVideoTracks(),
-                    ...stream.getAudioTracks()
+                    ...recordDestination.stream.getAudioTracks()
                 ]);
 
                 recordedChunks = [];
@@ -552,6 +707,10 @@
             
             if (animationId) cancelAnimationFrame(animationId);
             audioCtx = null;
+            eqLow = null;
+            eqMid = null;
+            eqHigh = null;
+            gainNode = null;
             drawStaticCircle();
         }
 
