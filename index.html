@@ -30,7 +30,6 @@
             overflow-x: hidden;
         }
 
-        /* 📋 上部説明書き専用 */
         .info-text-area {
             width: 100%;
             max-width: 420px; 
@@ -73,7 +72,6 @@
             line-height: 1.5;
         }
 
-        /* 🔒 メインコンテナ */
         .main-container {
             display: flex;
             width: 100%;
@@ -84,15 +82,13 @@
             margin: 10px 0 15px 0;
         }
 
-        /* 📦 左側エリア */
         .left-composite-zone {
             flex: 1.1; 
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* 免責がプレイヤーの直後に隙間なく並ぶように */
+            justify-content: flex-start;
         }
 
-        /* 📦 プレイヤー全体のパネル */
         .player-panel {
             width: 100%;
             background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg'); 
@@ -141,7 +137,6 @@
             z-index: 10;
         }
 
-        /* 🔊 横型ボリューム行 */
         .volume-row-zone {
             width: 100%;
             display: flex;
@@ -165,7 +160,6 @@
             align-items: center;
         }
 
-        /* 👆 上段アイコン */
         .top-icons {
             display: flex;
             justify-content: space-around;
@@ -193,7 +187,6 @@
             pointer-events: none;
         }
 
-        /* 🎚️ 再生バー＆左側再生ボタン */
         .control-bar-zone {
             width: 100%;
             display: flex;
@@ -225,7 +218,6 @@
             cursor: pointer;
         }
 
-        /* 🎛️ イコライザー */
         .compact-eq-container {
             width: 100%;
             background: rgba(0, 0, 0, 0.07); 
@@ -298,7 +290,6 @@
             border: none;
         }
 
-        /* 🔍 RESET AUDIOボタン */
         .audio-reset-btn {
             width: 100%;
             background: transparent;
@@ -317,7 +308,6 @@
         .audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
         .audio-reset-btn:active { transform: scale(0.98); }
 
-        /* 📋 復帰させた免責テキストエリア（プレイヤーの真下に左詰めで配置） */
         .bottom-info-zone {
             width: 100%;
             padding: 10px 6px 0 6px; 
@@ -330,7 +320,6 @@
             opacity: 0.6;
         }
 
-        /* 📜 右側サイドパネル */
         .side-panel {
             flex: 0.9;
             padding: 2px 0px 10px 12px; 
@@ -366,7 +355,6 @@
         .pointer { visibility: hidden; margin-right: 4px; }
         .color-option.active .pointer, .style-option.active .pointer { visibility: visible; }
 
-        /* 🎨 カラーパレット */
         .palette-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr); 
@@ -386,7 +374,6 @@
             transform: scale(1.1);
         }
         
-        /* 🎨 全16色グラデーションパレット */
         .p1 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
         .p2 { background: linear-gradient(135deg, #f8f8ff, #b0c4de); }
         .p3 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
@@ -479,7 +466,7 @@
 
             <div class="bottom-info-zone">
                 <div class="bottom-notice-text">
-                    ※動画の書き出しには数秒かかります^.ˬ.^ฅⳊ<br>
+                    ※動画の書き出しには数秒かかります。<br>
                     ※保存された動画ファイルの読み込みや再生、編集の可否は、お使いの動画プレイヤーや編集アプリの仕様に準じます。
                 </div>
             </div>
@@ -570,46 +557,51 @@
 
         let gainNode, eqLow, eqMid, eqHigh, recordDestination, audioNodeForPlayback;
 
-        // 初期描画
         drawStaticWave();
 
-        // 背景色変更
+        // パネル操作時に状態に応じて適切に再描画するトリガー関数
+        function triggerUIRefresh() {
+            if (isRecording || isPlayingRecorded) {
+                // 稼働中は次の描画ループ（draw）で自動反映されるため、何もしなくてOK（バグを防止）
+            } else {
+                // 停止・録音完了状態のときは、静止画を再描画する
+                drawStaticWave();
+            }
+        }
+
         btnBlack.addEventListener('click', () => {
             currentBgColor = 'black';
             btnBlack.classList.add('active');
             btnWhite.classList.remove('active');
             canvasBg.classList.remove('theme-white');
-            if (!isPlayingRecorded && !isRecording) drawStaticWave();
+            triggerUIRefresh();
         });
         btnWhite.addEventListener('click', () => {
             currentBgColor = 'white';
             btnWhite.classList.add('active');
             btnBlack.classList.remove('active');
             canvasBg.classList.add('theme-white');
-            if (!isPlayingRecorded && !isRecording) drawStaticWave();
+            triggerUIRefresh();
         });
 
-        // スタイル変更
         styleOptions.forEach(opt => {
             opt.addEventListener('click', () => {
                 styleOptions.forEach(o => o.classList.remove('active'));
                 opt.classList.add('active');
                 currentWaveStyle = opt.dataset.style;
-                if (!isPlayingRecorded && !isRecording) drawStaticWave();
+                triggerUIRefresh();
             });
         });
 
-        // カラーパレット変更
         palettes.forEach(palette => {
             palette.addEventListener('click', () => {
                 palettes.forEach(p => p.classList.remove('selected'));
                 palette.classList.add('selected');
                 currentWaveColors = JSON.parse(palette.dataset.colors);
-                if (!isPlayingRecorded && !isRecording) drawStaticWave();
+                triggerUIRefresh();
             });
         });
 
-        // 音響系コントロール
         volSlider.addEventListener('input', () => { if (gainNode) gainNode.gain.value = volSlider.value; });
         eqLowSlider.addEventListener('input', () => { if (eqLow) eqLow.gain.value = eqLowSlider.value; });
         eqMidSlider.addEventListener('input', () => { if (eqMid) eqMid.gain.value = eqMidSlider.value; });
@@ -628,13 +620,13 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // 静止画の初期描画関数
         function drawStaticWave() {
             clearCanvas();
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
             gradient.addColorStop(1, currentWaveColors[1]);
             ctx.strokeStyle = gradient;
+            ctx.fillStyle = gradient;
             ctx.lineWidth = 5;
             ctx.lineCap = 'round';
 
@@ -652,19 +644,23 @@
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(50, canvas.height / 2); ctx.lineTo(canvas.width - 50, canvas.height / 2);
-                ctx.stroke();
+                // 静止状態のオーロラライン
+                const barCount = 128;
+                const spacing = (canvas.width - 100) / barCount;
+                for (let i = 0; i < barCount; i++) {
+                    const x = 50 + i * spacing;
+                    const h = 10; 
+                    ctx.fillRect(x, (canvas.height / 2) - (h / 2), 2.5, h);
+                }
             }
         }
 
-        // 波形描写ロジック
         function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
             const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
             gradient.addColorStop(1, currentWaveColors[1]);
             targetCtx.strokeStyle = gradient;
+            targetCtx.fillStyle = gradient;
             targetCtx.lineWidth = 5;
             targetCtx.lineCap = 'round';
             
@@ -699,32 +695,28 @@
                     targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
+                // 🎚️ 高密度かつ色がしっかり乗る新型バーオーロラビジュアライザー
+                const barCount = 128; 
+                const spacing = (targetCanvas.width - 100) / barCount;
                 const centerY = targetCanvas.height / 2;
-                const widthRange = targetCanvas.width - 100;
-                const sliceWidth = widthRange / points;
-                targetCtx.lineWidth = 4;
                 
-                for (let level = 1; level <= 2; level++) {
-                    targetCtx.save();
-                    targetCtx.globalAlpha = level === 1 ? 0.3 : 0.7; 
+                for (let i = 0; i < barCount; i++) {
+                    // 周波数データを反転・平均化させて滑らかな波を作る
+                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
+                    const audioValue = dataArr[dataIndex] / 255;
+                    
+                    // 音が小さいときでもベースの厚みを持たせる
+                    const h = Math.max(8, audioValue * 280); 
+                    const x = 50 + i * spacing;
+                    
+                    // 角丸の細い縦バーを敷き詰めて面として見せる
                     targetCtx.beginPath();
-                    for (let i = 0; i < points; i++) {
-                        const audioValue = dataArr[i] / 255;
-                        const x = 50 + i * sliceWidth;
-                        const yAmp = level === 1 ? 90 : 60;
-                        const yFreq = level === 1 ? 0.2 : 0.4;
-                        const y = centerY + (audioValue * yAmp * Math.sin(i * yFreq * 0.1));
-                        
-                        if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
-                    }
-                    targetCtx.lineTo(targetCanvas.width - 50, centerY);
-                    targetCtx.stroke();
-                    targetCtx.restore();
+                    targetCtx.roundRect(x, centerY - (h / 2), 2.5, h, 1.5);
+                    targetCtx.fill();
                 }
             }
         }
 
-        // 録音処理一式
         recBtn.addEventListener('click', async () => {
             if (isRecording) return;
             resetDataWithoutPrompt();
@@ -840,7 +832,7 @@
                 }
                 video.play();
                 isPlayingRecorded = true;
-                playPauseImg.src = IMG_PLAY; 
+                playPauseImg.src = IMG_PAUSE; 
                 draw();
             } else {
                 video.pause();
@@ -850,7 +842,7 @@
 
         video.addEventListener('loadedmetadata', () => { seekBar.max = video.duration; seekBar.value = 0; });
         video.addEventListener('timeupdate', () => { if (!isUserChangingIndex && video.duration) seekBar.value = video.currentTime; });
-        video.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; video.currentTime = 0; seekBar.value = 0; });
+        video.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; isPlayingRecorded = false; cancelAnimationFrame(animationId); video.currentTime = 0; seekBar.value = 0; drawStaticWave(); });
         seekBar.addEventListener('input', () => { if (!audioBlobUrl) return; isUserChangingIndex = true; video.currentTime = seekBar.value; });
         seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
@@ -863,7 +855,6 @@
             drawWaveLogic(ctx, canvas, dataArray);
         }
 
-        // 動画書出システム
         downloadBtn.addEventListener('click', async () => {
             if (!audioBlobUrl) { alert("保存する動画がありません。先に○ボタンから録音を完了させてください.꙳☄︎ᐧ"); return; }
             
@@ -872,7 +863,7 @@
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const response = await fetch(audioBlobUrl);
-            const arrayBuffer = await response.buffer();
+            const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
 
             const bufferSource = renderAudioCtx.createBufferSource();
@@ -898,51 +889,6 @@
             rGain.connect(renderDest);
 
             const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-            const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsToSec: 2500000, audioBitsPerSecond: 320000 };
+            const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
             const movieRecorder = new MediaRecorder(combinedStream, options);
             const movieChunks = [];
-
-            movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
-            
-            movieRecorder.onstop = () => {
-                const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
-                const finalVideoUrl = URL.createObjectURL(finalBlob);
-                const a = document.createElement('a');
-                a.href = finalVideoUrl;
-                a.download = `voice-wave-${Date.now()}.webm`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                
-                downloadBtn.style.pointerEvents = 'auto';
-                alert("動画の保存が完了しました！🎉");
-            };
-
-            movieRecorder.start();
-            bufferSource.start(0);
-
-            const startTime = performance.now();
-            const duration = audioBuffer.duration * 1000;
-
-            function renderFrame() {
-                const now = performance.now();
-                const elapsed = now - startTime;
-
-                rAnalyser.getByteFrequencyData(rDataArray);
-                
-                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-
-                drawWaveLogic(rCtx, captureCanvas, rDataArray);
-
-                if (elapsed < duration) {
-                    requestAnimationFrame(renderFrame);
-                } else {
-                    bufferSource.stop();
-                    movieRecorder.stop();
-                    renderAudioCtx.close();
-                }
-            }
-            renderFrame();
-        });
-    </script>
-</body>
-</html>
