@@ -755,6 +755,31 @@
             return Math.sqrt(normalized);
         }
 
+        // ==========================================
+        // 円形繋ぎ目スムージング関数
+        // ==========================================
+        function getSmoothedValue(dataArr, index, points, range = 0.1) {
+            const rangePoints = Math.floor(points * range);
+            let rawValue = dataArr[index];
+
+            // 描き始め（0度付近）
+            if (index < rangePoints) {
+                const ratio = index / rangePoints;
+                const endValue = dataArr[points - 1]; // 配列の最後の値（低音ではない）
+                // 角度が0に近いほど、終わりの値（endValue）を混ぜる
+                rawValue = (rawValue * ratio) + (endValue * (1 - ratio));
+            } 
+            // 描き終わり（360度付近）
+            else if (index > points - rangePoints) {
+                const ratio = (points - index) / rangePoints;
+                const startValue = dataArr[0]; // 配列の最初の値（低音）
+                // 角度が360に近いほど、始まりの値（startValue）を混ぜる
+                rawValue = (rawValue * ratio) + (startValue * (1 - ratio));
+            }
+
+            return getBoostedValue(rawValue);
+        }
+
         function drawStaticWave() {
             clearCanvas(ctx, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -814,9 +839,11 @@
                 const baseRadius = 140;
                 const coords = [];
                 
+                // 繋ぎ目をなだらかにするために1周 + α（ quadraticCurveToの繋ぎのため）計算
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
-                    const boosted = getBoostedValue(dataArr[i]); 
+                    // 【繋ぎ目修正】スムージング関数を使う
+                    const boosted = getSmoothedValue(dataArr, i, points); 
                     const waveLength = Math.max(3, boosted * 102); 
                     const r = baseRadius + waveLength;
                     
@@ -831,18 +858,20 @@
                 
                 for (let i = 0; i < points; i++) {
                     const curr = coords[i];
+                    // 次のポイント。配列の最後なら最初に戻る（なだらかに繋ぐ）
                     const next = coords[(i + 1) % points];
                     const cpX = (curr.x + next.x) / 2;
                     const cpY = (curr.y + next.y) / 2;
                     targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
                 }
                 
-                targetCtx.closePath();
+                targetCtx.closePath(); // パスを閉じる（0度と360度が物理的に繋がる）
                 
                 targetCtx.save();
                 targetCtx.globalAlpha = 0.9;
                 targetCtx.fill(); 
                 
+                // 【くり抜き修正】ベタ塗りした後に、背景色でくり抜く処理を復活
                 targetCtx.globalCompositeOperation = 'destination-out';
                 targetCtx.beginPath();
                 targetCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
@@ -855,10 +884,12 @@
                 
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
+                    // 【繋ぎ目修正】STAR用のスムージング処理
+                    // STARはデータ全体から抽出するので、インデックスの計算を少し工夫
                     const dataIndex = Math.floor((i / barCount) * points);
+                    const smoothedBoosted = getSmoothedValue(dataArr, dataIndex, points, 0.15); // STARは少し広めにブレンド
                     
-                    const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveLength = Math.max(2, boosted * 85); 
+                    const waveLength = Math.max(2, smoothedBoosted * 85); 
                     
                     const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
                     const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -1074,9 +1105,10 @@
             const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
             const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
+            // fftSizeを上げすぎると quadraticCurveToがカクつく原因になるので256を維持
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-            // 🌟 修正ポイント: 音声処理ノードを順番に正しく直列で接続する
+            // 音声処理ノードを順番に正しく直列で接続する
             bufferSource.connect(rEqLow);
             rEqLow.connect(rEqMid);
             rEqMid.connect(rEqHigh);
