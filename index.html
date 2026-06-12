@@ -332,6 +332,7 @@
         .setting-section {
             margin-bottom: 15px; 
             flex-shrink: 0; 
+            transition: opacity 0.3s;
         }
         .setting-title {
             margin-bottom: 8px;
@@ -568,7 +569,8 @@
 
         let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, recordDestination = null;
 
-        // 初期描画
+        // 【修正】初期化の段階で絶対にロックがかからないように明示的に解除
+        unlockMenus();
         drawStaticWave();
 
         function triggerUIRefresh() {
@@ -728,9 +730,7 @@
             resetDataWithoutPrompt();
 
             try {
-                menuBg.classList.remove('locked');
-                menuStyle.classList.remove('locked');
-                menuColor.classList.remove('locked');
+                unlockMenus();
 
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
@@ -739,7 +739,6 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 source = audioCtx.createMediaStreamSource(stream);
                 
-                // 【ハウリング対策】第2引数に true を渡し、録音中はスピーカーへの出力を「切断」する
                 setupAudioNodes(source, true);
 
                 recordDestination = audioCtx.createMediaStreamDestination();
@@ -760,9 +759,7 @@
                     playbackAudio = new Audio(audioBlobUrl);
                     playbackAudio.preload = "auto";
                     
-                    // 録音プレイヤーと回路をガッチリ連結
                     const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
-                    // 【ハウリング対策】再生時はスピーカーから音を鳴らしたいので、第2引数を false にして再構築
                     setupAudioNodes(playbackSource, false);
 
                     playbackAudio.addEventListener('loadedmetadata', () => {
@@ -786,10 +783,7 @@
                     downloadBtn.classList.add('ready');
                     playPauseImg.src = IMG_PLAY;
 
-                    // 録音完了後のパレット完全ロック
-                    menuBg.classList.add('locked');
-                    menuStyle.classList.add('locked');
-                    menuColor.classList.add('locked');
+                    lockMenus();
                 };
 
                 mediaRecorder.start();
@@ -816,14 +810,19 @@
             isRecording = false;
             if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
             if (stream) stream.getTracks().forEach(track => track.stop());
-            if (animationId) cancelAnimationFrame(animationId);
+            
+            // 【重要・暴走対策】録音が止まったら即座にアニメーションを完全に強制終了させる
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
             clearInterval(timerInterval);
             recBtn.classList.remove('recording');
             timerDisplay.style.display = 'none';
             drawStaticWave();
         }
 
-        // 【ハウリング対策】引数にaudioSourceとisMuteSpeakerを追加
         function setupAudioNodes(audioSource, isMuteSpeaker) {
             if (!audioCtx || !audioSource) return;
             
@@ -838,7 +837,6 @@
             
             gainNode.connect(analyser);
             
-            // 録音中(isMuteSpeaker=true)なら、スマホのスピーカー(destination)には絶対に音を繋がない！
             if (!isMuteSpeaker) {
                 gainNode.connect(audioCtx.destination);
             }
@@ -849,6 +847,18 @@
         function updateTimerText() {
             const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
             timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function lockMenus() {
+            menuBg.classList.add('locked');
+            menuStyle.classList.add('locked');
+            menuColor.classList.add('locked');
+        }
+
+        function unlockMenus() {
+            menuBg.classList.remove('locked');
+            menuStyle.classList.remove('locked');
+            menuColor.classList.remove('locked');
         }
 
         resetBtn.addEventListener('click', () => {
@@ -865,14 +875,17 @@
             seekBar.value = 0;
             playPauseImg.src = IMG_PLAY; 
             downloadBtn.classList.remove('ready');
-            if (animationId) cancelAnimationFrame(animationId);
+            
+            // 【重要・暴走対策】リセット時もアニメーションループを完全に消し去る
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
             isPlayingRecorded = false; isRecording = false;
             audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
             
-            menuBg.classList.remove('locked');
-            menuStyle.classList.remove('locked');
-            menuColor.classList.remove('locked');
-            
+            unlockMenus();
             drawStaticWave();
         }
 
@@ -904,8 +917,14 @@
         seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
         function draw() {
-            if (!isRecording && !isPlayingRecorded) return;
+            // 【重要】どちらの状態でもない場合は、絶対に次のフレームを要求せずに即時終了して暴走を防ぐ
+            if (!isRecording && !isPlayingRecorded) {
+                animationId = null;
+                return;
+            }
+            
             animationId = requestAnimationFrame(draw);
+            
             if (analyser && dataArray) {
                 analyser.getByteFrequencyData(dataArray);
             }
@@ -934,7 +953,7 @@
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
 
-            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rGain); rGain.connect(rAnalyser);
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rGain.connect(rAnalyser);
             rGain.connect(renderAudioCtx.destination);
 
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
@@ -967,4 +986,32 @@
             };
 
             movieRecorder.start();
-            bufferSource
+            bufferSource.start(0);
+
+            const startTime = performance.now();
+            const duration = audioBuffer.duration * 1000;
+
+            function renderFrame() {
+                const now = performance.now();
+                const elapsed = now - startTime;
+
+                rAnalyser.getByteFrequencyData(rDataArray);
+                
+                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
+
+                drawWaveLogic(rCtx, captureCanvas, rDataArray);
+
+                if (elapsed < duration) {
+                    requestAnimationFrame(renderFrame);
+                } else {
+                    bufferSource.stop();
+                    movieRecorder.stop();
+                    renderAudioCtx.close();
+                }
+            }
+            renderFrame();
+        });
+    </script>
+</body>
+</html>
