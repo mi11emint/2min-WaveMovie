@@ -351,6 +351,13 @@
         .pointer { visibility: hidden; margin-right: 4px; }
         .color-option.active .pointer, .style-option.active .pointer { visibility: visible; }
 
+        /* ロック状態の見た目 */
+        .setting-section.locked {
+            opacity: 0.3 !important;
+            pointer-events: none !important;
+            cursor: not-allowed !important;
+        }
+
         .palette-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr); 
@@ -468,20 +475,20 @@
         </div>
 
         <div class="side-panel">
-            <div class="setting-section">
+            <div class="setting-section" id="menuBg">
                 <div class="setting-title">BACK COLOR</div>
                 <div id="btnBlack" class="color-option active"><span class="pointer">▶</span>BLACK</div>
                 <div id="btnWhite" class="color-option"><span class="pointer">▶</span>WHITE</div>
             </div>
 
-            <div class="setting-section">
+            <div class="setting-section" id="menuStyle">
                 <div class="setting-title">WAVE STYLE</div>
                 <div id="styleCircle" class="style-option active" data-style="circle"><span class="pointer">▶</span>CIRCLE</div>
                 <div id="styleDigitalCircle" class="style-option" data-style="digital_circle"><span class="pointer">▶</span>DIGITAL</div>
                 <div id="styleAurora" class="style-option" data-style="aurora"><span class="pointer">▶</span>AURORA</div>
             </div>
 
-            <div class="setting-section" style="margin-bottom: 0;">
+            <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
                 <div class="setting-title">WAVE COLOR</div>
                 <div class="palette-grid">
                     <div class="palette-circle p1 selected" data-colors='["#fff0f5", "#faf0e6"]'></div>
@@ -520,6 +527,10 @@
         const palettes = document.querySelectorAll('.palette-circle');
         const styleOptions = document.querySelectorAll('.style-option');
         
+        const menuBg = document.getElementById('menuBg');
+        const menuStyle = document.getElementById('menuStyle');
+        const menuColor = document.getElementById('menuColor');
+
         const playPauseBtn = document.getElementById('playPauseBtn');
         const playPauseImg = document.getElementById('playPauseImg'); 
         const seekBar = document.getElementById('seekBar');
@@ -561,17 +572,9 @@
         // 初期描画
         drawStaticWave();
 
-        // 【大修正】データが存在する場合は上書きリセットをかけないガード
         function triggerUIRefresh() {
             if (!isRecording && !isPlayingRecorded) {
-                // 音声データがすでにある（録音停止後）なら、画面を初期線に戻さない！
-                if (audioBlobUrl) {
-                    // 再生中ではないがデータがある時は、空のデータではなく少し変化をつけた静止画にするか、現在のキャンバスをそのまま維持
-                    // ここでは色や形の変更を即時反映するために一度クリアして、ダミーではない現在のスタイルを描画
-                    drawStaticWave();
-                } else {
-                    drawStaticWave();
-                }
+                drawStaticWave();
             }
         }
 
@@ -726,6 +729,11 @@
             resetDataWithoutPrompt();
 
             try {
+                // メニューロック解除
+                menuBg.classList.remove('locked');
+                menuStyle.classList.remove('locked');
+                menuColor.classList.remove('locked');
+
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
                 });
@@ -753,6 +761,10 @@
                     playbackAudio = new Audio(audioBlobUrl);
                     playbackAudio.preload = "auto";
                     
+                    // 【超安定化】スマホでのフリーズを避けるため、録音時のAudioContextに再生プレイヤーをここでガチガチに紐付け固定する
+                    source = audioCtx.createMediaElementSource(playbackAudio);
+                    source.connect(eqLow); // マイク用だったEQ回路へそのままドッキング
+
                     playbackAudio.addEventListener('loadedmetadata', () => {
                         seekBar.max = playbackAudio.duration;
                         seekBar.value = 0;
@@ -773,6 +785,11 @@
 
                     downloadBtn.classList.add('ready');
                     playPauseImg.src = IMG_PLAY;
+
+                    // 録音停止したのでメニューをガチガチにロック
+                    menuBg.classList.add('locked');
+                    menuStyle.classList.add('locked');
+                    menuColor.classList.add('locked');
                 };
 
                 mediaRecorder.start();
@@ -816,6 +833,9 @@
 
             if(source) source.connect(eqLow);
             eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
+            
+            // 再生時に自分のイヤホンやスピーカーから音が鳴るように最終出力へ接続
+            gainNode.connect(audioCtx.destination);
             gainNode.connect(analyser);
             
             syncAudioParams();
@@ -829,7 +849,7 @@
         resetBtn.addEventListener('click', () => {
             if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
                 resetDataWithoutPrompt();
-                alert("リセットしました。録音ボタンを押すと新しく録音できます^.ˬ.^");
+                alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^");
             }
         });
 
@@ -843,6 +863,12 @@
             if (animationId) cancelAnimationFrame(animationId);
             isPlayingRecorded = false; isRecording = false;
             audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
+            
+            // ロック解除
+            menuBg.classList.remove('locked');
+            menuStyle.classList.remove('locked');
+            menuColor.classList.remove('locked');
+            
             drawStaticWave();
         }
 
@@ -850,13 +876,9 @@
             if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください。"); return; }
             
             if (playbackAudio.paused) {
-                // 【超重要】パレット変更等で一度リセット状態になっても、再生時に確実に再接続する
-                if (!source || !audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    source = audioCtx.createMediaElementSource(playbackAudio);
-                    setupAudioNodes();
-                    gainNode.connect(audioCtx.destination);
-                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                // スマホのセキュリティ制限解除のため、中断されていたContextを再開させてから再生
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
                 }
                 playbackAudio.play().then(() => {
                     isPlayingRecorded = true;
