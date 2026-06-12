@@ -400,7 +400,6 @@
             transform: scale(1.1);
         }
         
-        /* 薄い・明るいトーン（上層） */
         .cp1 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
         .cp2 { background: linear-gradient(135deg, #dfe9f3, white ); }
         .cp3 { background: linear-gradient(135deg, #fff1eb, #ace0f9); }
@@ -410,7 +409,6 @@
         .cp7 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
         .cp8 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
         
-        /* 中間・鮮やかトーン（中層） */
         .cp9 { background: linear-gradient(135deg, #FFF6B7, #F6416C); }
         .cp10 { background: linear-gradient(135deg, #a6c0fe, #f68084); }
         .cp11 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
@@ -420,7 +418,6 @@
         .cp15 { background: linear-gradient(135deg, #00ffff, #00008b); }
         .cp16 { background: linear-gradient(135deg, #16a085, #f4d03f); }
 
-        /* 渋い・深いトーン（下層） */
         .cp17 { background: linear-gradient(135deg, #dc143c, #8b0000); }
         .cp18 { background: linear-gradient(135deg, #4b0082, #6495ed); }
         .cp19 { background: linear-gradient(135deg, #243949, #517fa4); }
@@ -430,7 +427,6 @@
         .cp23 { background: linear-gradient(135deg, #a8caba, #5d4157); }
         .cp24 { background: linear-gradient(135deg, #eeeeee, #111111); } 
         
-        /* マンスリー限定セクションの追加スタイル */
         .monthly-section {
             margin-top: 15px;
         }
@@ -555,8 +551,7 @@
 
             <div class="setting-section monthly-section" id="menuMonthlyColor">
                 <div class="setting-title" id="monthlyTitle">JUNE COLOR</div>
-                <div class="palette-grid" id="monthlyGrid">
-                    </div>
+                <div class="palette-grid" id="monthlyGrid"></div>
             </div>
         </div>
     </div>
@@ -571,9 +566,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // 毎月の変更はここを書き換えるだけでOK！
-        // ==========================================
         const MONTHLY_SETTING = {
             title: "JUNE COLOR", 
             patterns: [
@@ -648,7 +640,7 @@
             const grid = document.getElementById('monthlyGrid');
             grid.innerHTML = ''; 
             
-            MONTHLY_SETTING.patterns.forEach((colors, index) => {
+            MONTHLY_SETTING.patterns.forEach((colors) => {
                 const circle = document.createElement('div');
                 circle.className = 'palette-circle';
                 circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
@@ -709,10 +701,7 @@
             if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
             if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
             if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
-            
-            if (ncFilter) {
-                ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
-            }
+            if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
         }
 
         volSlider.addEventListener('input', syncAudioParams);
@@ -752,32 +741,6 @@
             return Math.sqrt(normalized);
         }
 
-        // ===================================================
-        // 【繋ぎ目修正】コサイン補間（サインカーブ）による超なだらかスムージング
-        // ===================================================
-        function getSmoothedValue(dataArr, index, points, rangeRatio = 0.12) {
-            const rangePoints = Math.floor(points * rangeRatio);
-            let rawValue = dataArr[index];
-
-            if (index < rangePoints) {
-                // 描き始め（0度付近）：終わりの値（高音側）を滑らかに混ぜる
-                const endValue = dataArr[points - 1];
-                const blendRatio = index / rangePoints; 
-                // コサイン曲線で重みを滑らかに変換 (0〜1)
-                const smoothWeight = (1 - Math.cos(blendRatio * Math.PI)) / 2;
-                rawValue = (rawValue * smoothWeight) + (endValue * (1 - smoothWeight));
-            } 
-            else if (index > points - rangePoints) {
-                // 描き終わり（360度付近）：始まりの値（低音側）を滑らかに混ぜる
-                const startValue = dataArr[0];
-                const blendRatio = (points - index) / rangePoints; 
-                const smoothWeight = (1 - Math.cos(blendRatio * Math.PI)) / 2;
-                rawValue = (rawValue * smoothWeight) + (startValue * (1 - smoothWeight));
-            }
-
-            return getBoostedValue(rawValue);
-        }
-
         function drawStaticWave() {
             clearCanvas(ctx, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -808,13 +771,13 @@
                 }
             } else if (currentWaveStyle === 'aurora') {
                 const centerY = canvas.height / 2;
-                ctx.beginPath();
-                ctx.moveTo(40, centerY);
-                ctx.lineTo(canvas.width - 40, centerY);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
             }
         }
 
+        // ===================================================
+        // 【修正】無音データを排除し、0-360度を真になだらかに繋ぐロジック
+        // ===================================================
         function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
             const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
@@ -829,19 +792,27 @@
             targetCtx.lineWidth = 4;
             targetCtx.lineCap = 'round';
             
-            const points = dataArr.length;
             const centerX = targetCanvas.width / 2; 
             const centerY = targetCanvas.height / 2;
+
+            // 高音側の無駄な無音スペースをカットした有効データ範囲（約80%を使用）
+            const validRange = Math.floor(dataArr.length * 0.82);
+            // 綺麗なウネウネを描くための仮想分割ステップ数
+            const steps = 120; 
 
             if (currentWaveStyle === 'corona') {
                 const baseRadius = 140;
                 const coords = [];
                 
-                // 全ポイントのウネウネ座標を精密に計算
-                for (let i = 0; i < points; i++) {
-                    const angle = (i / points) * Math.PI * 2;
-                    const boosted = getSmoothedValue(dataArr, i, points, 0.15); // スムージング幅を調整
-                    const waveLength = Math.max(3, boosted * 102); 
+                for (let i = 0; i < steps; i++) {
+                    const angle = (i / steps) * Math.PI * 2;
+                    
+                    // 360度の位置で折り返すようにマッピングし、繋ぎ目の断絶を完全防止
+                    const mapRatio = i < steps / 2 ? (i / (steps / 2)) : ((steps - i) / (steps / 2));
+                    const dataIdx = Math.floor(mapRatio * (validRange - 1));
+                    
+                    const boosted = getBoostedValue(dataArr[dataIdx]);
+                    const waveLength = Math.max(3, boosted * 95); 
                     const r = baseRadius + waveLength;
                     
                     coords.push({
@@ -850,25 +821,22 @@
                     });
                 }
                 
-                // パスを描画して確実に閉じる
                 targetCtx.beginPath();
                 targetCtx.moveTo(coords[0].x, coords[0].y);
-                for (let i = 0; i < points; i++) {
+                for (let i = 0; i < steps; i++) {
                     const curr = coords[i];
-                    const next = coords[(i + 1) % points];
+                    const next = coords[(i + 1) % steps];
                     const cpX = (curr.x + next.x) / 2;
                     const cpY = (curr.y + next.y) / 2;
                     targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
                 }
                 targetCtx.closePath();
                 
-                // ウネウネ円全体を一度グラデーションで塗りつぶす
                 targetCtx.save();
                 targetCtx.globalAlpha = 0.9;
                 targetCtx.fill(); 
                 targetCtx.restore();
                 
-                // 【くり抜き修正】合成モードを使わず、背景色で上書きして確実にドーナツ化
                 targetCtx.save();
                 targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
                 targetCtx.beginPath();
@@ -882,9 +850,11 @@
                 
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
-                    const dataIndex = Math.floor((i / barCount) * points);
-                    const smoothedBoosted = getSmoothedValue(dataArr, dataIndex, points, 0.15); 
-                    const waveLength = Math.max(2, smoothedBoosted * 85); 
+                    const mapRatio = i < barCount / 2 ? (i / (barCount / 2)) : ((barCount - i) / (barCount / 2));
+                    const dataIdx = Math.floor(mapRatio * (validRange - 1));
+                    
+                    const boosted = getBoostedValue(dataArr[dataIdx]);
+                    const waveLength = Math.max(2, boosted * 80); 
                     
                     const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
                     const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -901,19 +871,16 @@
                 const usedPoints = 32; 
                 const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
                 const activeCenterY = targetCanvas.height / 2;
-
                 const coords = [];
                 let hasAudio = false;
 
                 for (let i = 0; i < usedPoints; i++) {
-                    const dataIndex = Math.floor((i / usedPoints) * (points * 0.75));
-                    if (dataArr[dataIndex] > 0) hasAudio = true;
+                    const dataIdx = Math.floor((i / usedPoints) * validRange);
+                    if (dataArr[dataIdx] > 0) hasAudio = true;
 
-                    const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveHeight = boosted * 123; 
-                    
-                    const x = 40 + i * spacing;
-                    coords.push({x, waveHeight});
+                    const boosted = getBoostedValue(dataArr[dataIdx]);
+                    const waveHeight = boosted * 120; 
+                    coords.push({x: 40 + i * spacing, waveHeight});
                 }
 
                 if (!hasAudio) {
@@ -926,27 +893,19 @@
 
                 targetCtx.beginPath();
                 targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
-
                 for (let i = 1; i < usedPoints; i++) {
                     const prev = coords[i - 1];
                     const curr = coords[i];
                     const cpX = (prev.x + curr.x) / 2;
-                    const prevY = activeCenterY - prev.waveHeight;
-                    const currY = activeCenterY - curr.waveHeight;
-                    targetCtx.bezierCurveTo(cpX, prevY, cpX, currY, curr.x, currY);
+                    targetCtx.bezierCurveTo(cpX, activeCenterY - prev.waveHeight, cpX, activeCenterY - curr.waveHeight, curr.x, activeCenterY - curr.waveHeight);
                 }
-
                 targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
-
                 for (let i = usedPoints - 1; i > 0; i--) {
                     const curr = coords[i];
                     const next = coords[i - 1];
                     const cpX = (curr.x + next.x) / 2;
-                    const currY = activeCenterY + curr.waveHeight;
-                    const nextY = activeCenterY + next.waveHeight;
-                    targetCtx.bezierCurveTo(cpX, currY, cpX, nextY, next.x, nextY);
+                    targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY + next.waveHeight, next.x, activeCenterY + next.waveHeight);
                 }
-
                 targetCtx.closePath();
 
                 targetCtx.save();
@@ -1084,10 +1043,17 @@
             if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
         }
 
+        // ===================================================
+        // 【修正】OKを押さなくても自動で処理が進む保存ロジック
+        // ===================================================
         downloadBtn.addEventListener('click', async () => {
             if (!audioBlob) { alert("保存する動画がありません。"); return; }
             downloadBtn.style.pointerEvents = 'none';
-            alert("動画の書き出しを開始します。完了するまでブラウザを閉じずにお待ちください･･･✶⋆.˚꩜");
+
+            // 通知方法を自動で消えるUIテキストか、ノンブロッキングなログ等にするのが理想ですが、
+            // 既存の挙動を崩さないようalertの代わりに画面に一瞬出すメッセージなどに変えることも可能です。
+            // ここでは即時処理を開始し、ユーザーの入力を待たない非同期処理にします。
+            console.log("動画の書き出しを開始します･･･✶⋆.˚꩜");
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const arrayBuffer = await audioBlob.arrayBuffer();
@@ -1102,17 +1068,10 @@
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-            bufferSource.connect(rEqLow);
-            rEqLow.connect(rEqMid);
-            rEqMid.connect(rEqHigh);
-            rEqHigh.connect(rNcFilter);
-            rNcFilter.connect(rGain);
-            rGain.connect(rAnalyser); 
-            
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser); 
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
-            const captureCanvas = document.createElement('canvas');
-            captureCanvas.width = 600; captureCanvas.height = 600;
+            const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
             const rCtx = captureCanvas.getContext('2d');
             const canvasStream = captureCanvas.captureStream(30);
             const renderDest = renderAudioCtx.createMediaStreamDestination();
@@ -1129,7 +1088,8 @@
                 const finalVideoUrl = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                downloadBtn.style.pointerEvents = 'auto'; alert("動画の保存が完了しました！^.ˬ.^ฅⳊ");
+                downloadBtn.style.pointerEvents = 'auto'; 
+                alert("動画の保存が完了しました！^.ˬ.^ฅⳊ");
             };
 
             movieRecorder.start(); bufferSource.start(0);
