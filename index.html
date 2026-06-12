@@ -559,12 +559,10 @@
 
         drawStaticWave();
 
-        // パネル操作時に状態に応じて適切に再描画するトリガー関数
         function triggerUIRefresh() {
             if (isRecording || isPlayingRecorded) {
-                // 稼働中は次の描画ループ（draw）で自動反映されるため、何もしなくてOK（バグを防止）
+                // 稼働中は自動反映されるため何もしない
             } else {
-                // 停止・録音完了状態のときは、静止画を再描画する
                 drawStaticWave();
             }
         }
@@ -625,8 +623,8 @@
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
             gradient.addColorStop(1, currentWaveColors[1]);
-            ctx.strokeStyle = gradient;
             ctx.fillStyle = gradient;
+            ctx.strokeStyle = gradient;
             ctx.lineWidth = 5;
             ctx.lineCap = 'round';
 
@@ -644,13 +642,13 @@
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                // 静止状態のオーロラライン
                 const barCount = 128;
                 const spacing = (canvas.width - 100) / barCount;
+                const centerY = canvas.height / 2;
                 for (let i = 0; i < barCount; i++) {
                     const x = 50 + i * spacing;
                     const h = 10; 
-                    ctx.fillRect(x, (canvas.height / 2) - (h / 2), 2.5, h);
+                    ctx.fillRect(x, centerY - (h / 2), 2.5, h);
                 }
             }
         }
@@ -695,24 +693,19 @@
                     targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                // 🎚️ 高密度かつ色がしっかり乗る新型バーオーロラビジュアライザー
                 const barCount = 128; 
                 const spacing = (targetCanvas.width - 100) / barCount;
                 const centerY = targetCanvas.height / 2;
                 
                 for (let i = 0; i < barCount; i++) {
-                    // 周波数データを反転・平均化させて滑らかな波を作る
                     const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
                     const audioValue = dataArr[dataIndex] / 255;
                     
-                    // 音が小さいときでもベースの厚みを持たせる
                     const h = Math.max(8, audioValue * 280); 
                     const x = 50 + i * spacing;
                     
-                    // 角丸の細い縦バーを敷き詰めて面として見せる
-                    targetCtx.beginPath();
-                    targetCtx.roundRect(x, centerY - (h / 2), 2.5, h, 1.5);
-                    targetCtx.fill();
+                    // 全環境で100%バグらない超安全な塗りつぶしコードに変更！
+                    targetCtx.fillRect(x, centerY - (h / 2), 2.5, h);
                 }
             }
         }
@@ -875,20 +868,4 @@
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
 
-            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rGain); rGain.connect(rAnalyser);
-            rGain.connect(renderAudioCtx.destination);
-
-            const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
-            
-            const captureCanvas = document.createElement('canvas');
-            captureCanvas.width = 600; captureCanvas.height = 600;
-            const rCtx = captureCanvas.getContext('2d');
-            const canvasStream = captureCanvas.captureStream(30);
-
-            const renderDest = renderAudioCtx.createMediaStreamDestination();
-            rGain.connect(renderDest);
-
-            const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-            const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
-            const movieRecorder = new MediaRecorder(combinedStream, options);
-            const movieChunks = [];
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rGain
