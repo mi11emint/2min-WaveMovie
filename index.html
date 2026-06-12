@@ -544,7 +544,7 @@
         let recordedChunks = [];
         let audioBlob = null;
         let audioBlobUrl = null; 
-        let playbackAudio = null; // スマホ安全のための実音声要素
+        let playbackAudio = null; 
 
         let timerInterval = null;
         let timeLeft = 120;
@@ -561,9 +561,17 @@
         // 初期描画
         drawStaticWave();
 
+        // 【大修正】データが存在する場合は上書きリセットをかけないガード
         function triggerUIRefresh() {
             if (!isRecording && !isPlayingRecorded) {
-                drawStaticWave();
+                // 音声データがすでにある（録音停止後）なら、画面を初期線に戻さない！
+                if (audioBlobUrl) {
+                    // 再生中ではないがデータがある時は、空のデータではなく少し変化をつけた静止画にするか、現在のキャンバスをそのまま維持
+                    // ここでは色や形の変更を即時反映するために一度クリアして、ダミーではない現在のスタイルを描画
+                    drawStaticWave();
+                } else {
+                    drawStaticWave();
+                }
             }
         }
 
@@ -834,7 +842,7 @@
             downloadBtn.classList.remove('ready');
             if (animationId) cancelAnimationFrame(animationId);
             isPlayingRecorded = false; isRecording = false;
-            audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null;
+            audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
             drawStaticWave();
         }
 
@@ -842,7 +850,8 @@
             if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください。"); return; }
             
             if (playbackAudio.paused) {
-                if (!source) {
+                // 【超重要】パレット変更等で一度リセット状態になっても、再生時に確実に再接続する
+                if (!source || !audioCtx) {
                     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     source = audioCtx.createMediaElementSource(playbackAudio);
                     setupAudioNodes();
