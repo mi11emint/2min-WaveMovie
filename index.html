@@ -575,7 +575,7 @@
         // 毎月の変更はここを書き換えるだけでOK！
         // ==========================================
         const MONTHLY_SETTING = {
-            title: "JUNE COLOR", // 表示するタイトル
+            title: "JUNE COLOR", 
             patterns: [
                 ["#f3f3f3", "#e7e7eb", "#dcdddd"],
                 ["#D0E03D", "#83B2E7", "#C4DDE7"],
@@ -643,16 +643,14 @@
 
         let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
 
-        // --- マンスリーカラーの自動生成と初期化 ---
         function initMonthlyColors() {
             document.getElementById('monthlyTitle').innerText = MONTHLY_SETTING.title;
             const grid = document.getElementById('monthlyGrid');
-            grid.innerHTML = ''; // クリア
+            grid.innerHTML = ''; 
             
             MONTHLY_SETTING.patterns.forEach((colors, index) => {
                 const circle = document.createElement('div');
                 circle.className = 'palette-circle';
-                // 3色グラデーションの背景CSSを作成
                 circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
                 circle.dataset.colors = JSON.stringify(colors);
                 grid.appendChild(circle);
@@ -660,7 +658,6 @@
         }
         initMonthlyColors();
 
-        // パレット全体のイベント登録（通常24色 + 新設4色）
         function setupPaletteEvents() {
             const allPalettes = document.querySelectorAll('.palette-circle');
             allPalettes.forEach(palette => {
@@ -755,26 +752,27 @@
             return Math.sqrt(normalized);
         }
 
-        // ==========================================
-        // 円形繋ぎ目スムージング関数
-        // ==========================================
-        function getSmoothedValue(dataArr, index, points, range = 0.1) {
-            const rangePoints = Math.floor(points * range);
+        // ===================================================
+        // 【繋ぎ目修正】コサイン補間（サインカーブ）による超なだらかスムージング
+        // ===================================================
+        function getSmoothedValue(dataArr, index, points, rangeRatio = 0.12) {
+            const rangePoints = Math.floor(points * rangeRatio);
             let rawValue = dataArr[index];
 
-            // 描き始め（0度付近）
             if (index < rangePoints) {
-                const ratio = index / rangePoints;
-                const endValue = dataArr[points - 1]; // 配列の最後の値（低音ではない）
-                // 角度が0に近いほど、終わりの値（endValue）を混ぜる
-                rawValue = (rawValue * ratio) + (endValue * (1 - ratio));
+                // 描き始め（0度付近）：終わりの値（高音側）を滑らかに混ぜる
+                const endValue = dataArr[points - 1];
+                const blendRatio = index / rangePoints; 
+                // コサイン曲線で重みを滑らかに変換 (0〜1)
+                const smoothWeight = (1 - Math.cos(blendRatio * Math.PI)) / 2;
+                rawValue = (rawValue * smoothWeight) + (endValue * (1 - smoothWeight));
             } 
-            // 描き終わり（360度付近）
             else if (index > points - rangePoints) {
-                const ratio = (points - index) / rangePoints;
-                const startValue = dataArr[0]; // 配列の最初の値（低音）
-                // 角度が360に近いほど、始まりの値（startValue）を混ぜる
-                rawValue = (rawValue * ratio) + (startValue * (1 - ratio));
+                // 描き終わり（360度付近）：始まりの値（低音側）を滑らかに混ぜる
+                const startValue = dataArr[0];
+                const blendRatio = (points - index) / rangePoints; 
+                const smoothWeight = (1 - Math.cos(blendRatio * Math.PI)) / 2;
+                rawValue = (rawValue * smoothWeight) + (startValue * (1 - smoothWeight));
             }
 
             return getBoostedValue(rawValue);
@@ -839,11 +837,10 @@
                 const baseRadius = 140;
                 const coords = [];
                 
-                // 繋ぎ目をなだらかにするために1周 + α（ quadraticCurveToの繋ぎのため）計算
+                // 全ポイントのウネウネ座標を精密に計算
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
-                    // 【繋ぎ目修正】スムージング関数を使う
-                    const boosted = getSmoothedValue(dataArr, i, points); 
+                    const boosted = getSmoothedValue(dataArr, i, points, 0.15); // スムージング幅を調整
                     const waveLength = Math.max(3, boosted * 102); 
                     const r = baseRadius + waveLength;
                     
@@ -853,26 +850,27 @@
                     });
                 }
                 
+                // パスを描画して確実に閉じる
                 targetCtx.beginPath();
                 targetCtx.moveTo(coords[0].x, coords[0].y);
-                
                 for (let i = 0; i < points; i++) {
                     const curr = coords[i];
-                    // 次のポイント。配列の最後なら最初に戻る（なだらかに繋ぐ）
                     const next = coords[(i + 1) % points];
                     const cpX = (curr.x + next.x) / 2;
                     const cpY = (curr.y + next.y) / 2;
                     targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
                 }
+                targetCtx.closePath();
                 
-                targetCtx.closePath(); // パスを閉じる（0度と360度が物理的に繋がる）
-                
+                // ウネウネ円全体を一度グラデーションで塗りつぶす
                 targetCtx.save();
                 targetCtx.globalAlpha = 0.9;
                 targetCtx.fill(); 
+                targetCtx.restore();
                 
-                // 【くり抜き修正】ベタ塗りした後に、背景色でくり抜く処理を復活
-                targetCtx.globalCompositeOperation = 'destination-out';
+                // 【くり抜き修正】合成モードを使わず、背景色で上書きして確実にドーナツ化
+                targetCtx.save();
+                targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
                 targetCtx.beginPath();
                 targetCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
                 targetCtx.fill();
@@ -884,11 +882,8 @@
                 
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
-                    // 【繋ぎ目修正】STAR用のスムージング処理
-                    // STARはデータ全体から抽出するので、インデックスの計算を少し工夫
                     const dataIndex = Math.floor((i / barCount) * points);
-                    const smoothedBoosted = getSmoothedValue(dataArr, dataIndex, points, 0.15); // STARは少し広めにブレンド
-                    
+                    const smoothedBoosted = getSmoothedValue(dataArr, dataIndex, points, 0.15); 
                     const waveLength = Math.max(2, smoothedBoosted * 85); 
                     
                     const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
@@ -1059,7 +1054,7 @@
         }
 
         resetBtn.addEventListener('click', () => {
-            if (confirm("現在の状態をクリアして、最初からやり職しますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
+            if (confirm("現在の状態をクリアして、最初からやり直しますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
@@ -1105,16 +1100,14 @@
             const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
             const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
-            // fftSizeを上げすぎると quadraticCurveToがカクつく原因になるので256を維持
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-            // 音声処理ノードを順番に正しく直列で接続する
             bufferSource.connect(rEqLow);
             rEqLow.connect(rEqMid);
             rEqMid.connect(rEqHigh);
             rEqHigh.connect(rNcFilter);
             rNcFilter.connect(rGain);
-            rGain.connect(rAnalyser); // アナライザーを音の流れの末尾に接続
+            rGain.connect(rAnalyser); 
             
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
