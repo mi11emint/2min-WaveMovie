@@ -286,6 +286,28 @@
             border: none;
         }
 
+        .noise-cancel-btn {
+            width: 100%;
+            background: transparent;
+            color: #777777; 
+            border: 1px solid rgba(119, 119, 119, 0.4); 
+            padding: 5px 0;
+            font-family: 'Cinecaption', 'Courier New', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 1.5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px; 
+            border-radius: 4px;
+        }
+        .noise-cancel-btn.active {
+            color: #ffffff;
+            background: rgba(119, 119, 119, 0.4);
+            border-color: #ffffff;
+        }
+        .noise-cancel-btn:active { transform: scale(0.98); }
+
         .audio-reset-btn {
             width: 100%;
             background: transparent;
@@ -298,7 +320,7 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin-top: 10px; 
+            margin-top: 6px; 
             border-radius: 4px;
         }
         .audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
@@ -477,6 +499,7 @@
                     </div>
                 </div>
 
+                <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE CANCEL: OFF</button>
                 <button id="audioResetBtn" class="audio-reset-btn">RESET AUDIO</button>
             </div>
         </div>
@@ -563,6 +586,8 @@
         const eqLowSlider = document.getElementById('eqLowSlider');
         const eqMidSlider = document.getElementById('eqMidSlider');
         const eqHighSlider = document.getElementById('eqHighSlider');
+        
+        const noiseCancelBtn = document.getElementById('noiseCancelBtn');
         const audioResetBtn = document.getElementById('audioResetBtn'); 
         
         const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
@@ -585,12 +610,12 @@
         let timeLeft = 120;
 
         let currentBgColor = 'black';
-        // 初期色を1番目の淡いブルー×ホワイトに変更
         let currentWaveColors = ["#dfe9f3", "#ffffff"];
         let currentWaveStyle = 'circle'; 
         let isUserChangingIndex = false;
         let isRecording = false;
         let isPlayingRecorded = false;
+        let isNoiseCancelOn = false; // ノイズキャンセルの状態管理
 
         let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, recordDestination = null;
 
@@ -648,6 +673,22 @@
         eqMidSlider.addEventListener('input', syncAudioParams);
         eqHighSlider.addEventListener('input', syncAudioParams);
 
+        // ノイズキャンセルボタンのトグルイベント
+        noiseCancelBtn.addEventListener('click', () => {
+            isNoiseCancelOn = !isNoiseCancelOn;
+            if (isNoiseCancelOn) {
+                noiseCancelBtn.classList.add('active');
+                noiseCancelBtn.innerText = "NOISE CANCEL: ON";
+            } else {
+                noiseCancelBtn.classList.remove('active');
+                noiseCancelBtn.innerText = "NOISE CANCEL: OFF";
+            }
+            // 録音中であれば、マイクストリームを一度再起動して設定を即時反映する
+            if (isRecording) {
+                restartRecordingStream();
+            }
+        });
+
         audioResetBtn.addEventListener('click', () => {
             volSlider.value = 1.0; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
             syncAudioParams();
@@ -658,6 +699,12 @@
             targetCtx.fillRect(0, 0, w, h);
         }
 
+        function getBoostedValue(rawByteValue) {
+            const normalized = rawByteValue / 255;
+            if (normalized === 0) return 0;
+            return Math.sqrt(normalized);
+        }
+
         function drawStaticWave() {
             clearCanvas(ctx, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -665,7 +712,7 @@
             gradient.addColorStop(1, currentWaveColors[1]);
             ctx.fillStyle = gradient;
             ctx.strokeStyle = gradient;
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
 
             if (currentWaveStyle === 'circle') {
@@ -682,14 +729,12 @@
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                const barCount = 128;
-                const spacing = (canvas.width - 100) / barCount;
                 const centerY = canvas.height / 2;
-                for (let i = 0; i < barCount; i++) {
-                    const x = 50 + i * spacing;
-                    const h = 10; 
-                    ctx.fillRect(x, centerY - (h / 2), 2.5, h);
-                }
+                // 静止時は真ん中をすっと通る「きれいな1本の横線」にする
+                ctx.beginPath();
+                ctx.moveTo(40, centerY);
+                ctx.lineTo(canvas.width - 40, centerY);
+                ctx.stroke();
             }
         }
 
@@ -699,7 +744,7 @@
             gradient.addColorStop(1, currentWaveColors[1]);
             targetCtx.strokeStyle = gradient;
             targetCtx.fillStyle = gradient;
-            targetCtx.lineWidth = 5;
+            targetCtx.lineWidth = 4;
             targetCtx.lineCap = 'round';
             
             const points = dataArr.length;
@@ -709,8 +754,9 @@
                 const baseRadius = 140;
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
-                    const audioValue = dataArr[i] / 255; 
-                    const waveLength = audioValue * 95; 
+                    const boosted = getBoostedValue(dataArr[i]); 
+                    const waveLength = Math.max(3, boosted * 120); 
+                    
                     const startX = centerX + Math.cos(angle) * baseRadius;
                     const startY = centerY + Math.sin(angle) * baseRadius;
                     const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
@@ -724,8 +770,10 @@
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
                     const dataIndex = Math.floor((i / barCount) * points);
-                    const audioValue = dataArr[dataIndex] / 255;
-                    const waveLength = Math.max(6, audioValue * 100); 
+                    
+                    const boosted = getBoostedValue(dataArr[dataIndex]);
+                    const waveLength = Math.max(8, boosted * 125); 
+                    
                     const startX = centerX + Math.cos(angle) * baseRadius;
                     const startY = centerY + Math.sin(angle) * baseRadius;
                     const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
@@ -733,19 +781,123 @@
                     targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                const barCount = 128; 
-                const spacing = (targetCanvas.width - 100) / barCount;
+                const usedPoints = 32; 
+                const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
                 const centerY = targetCanvas.height / 2;
-                
-                for (let i = 0; i < barCount; i++) {
-                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
-                    const audioValue = dataArr[dataIndex] / 255;
+
+                const coords = [];
+                let hasAudio = false;
+
+                for (let i = 0; i < usedPoints; i++) {
+                    const dataIndex = Math.floor((i / usedPoints) * (points * 0.75));
+                    if (dataArr[dataIndex] > 0) hasAudio = true;
+
+                    const boosted = getBoostedValue(dataArr[dataIndex]);
+                    const waveHeight = boosted * 145; 
                     
-                    const h = Math.max(8, audioValue * 280); 
-                    const x = 50 + i * spacing;
-                    
-                    targetCtx.fillRect(x, centerY - (h / 2), 2.5, h);
+                    const x = 40 + i * spacing;
+                    coords.push({x, waveHeight});
                 }
+
+                // 音が完全にゼロ（または無音）のときはきれいな直線を描く
+                if (!hasAudio) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(40, centerY);
+                    targetCtx.lineTo(targetCanvas.width - 40, centerY);
+                    targetCtx.stroke();
+                    return;
+                }
+
+                targetCtx.beginPath();
+                targetCtx.moveTo(coords[0].x, centerY - coords[0].waveHeight);
+
+                // 1. 上半分のベジェ曲線
+                for (let i = 1; i < usedPoints; i++) {
+                    const prev = coords[i - 1];
+                    const curr = coords[i];
+                    const cpX = (prev.x + curr.x) / 2;
+                    const prevY = centerY - prev.waveHeight;
+                    const currY = centerY - curr.waveHeight;
+                    targetCtx.bezierCurveTo(cpX, prevY, cpX, currY, curr.x, currY);
+                }
+
+                // 右端を下半分に接続
+                targetCtx.lineTo(coords[usedPoints - 1].x, centerY + coords[usedPoints - 1].waveHeight);
+
+                // 2. 下半分の鏡合わせベジェ曲線
+                for (let i = usedPoints - 1; i > 0; i--) {
+                    const curr = coords[i];
+                    const next = coords[i - 1];
+                    const cpX = (curr.x + next.x) / 2;
+                    const currY = centerY + curr.waveHeight;
+                    const nextY = centerY + next.waveHeight;
+                    targetCtx.bezierCurveTo(cpX, currY, cpX, nextY, next.x, nextY);
+                }
+
+                targetCtx.closePath();
+
+                targetCtx.save();
+                targetCtx.globalAlpha = 0.9; 
+                targetCtx.fill();
+                targetCtx.restore();
+            }
+        }
+
+        // 録音ストリームを起動する共通関数
+        async function startRecordingStream() {
+            // ノイズキャンセル設定値に基づいてマイクを要求
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: isNoiseCancelOn, 
+                    noiseSuppression: isNoiseCancelOn, 
+                    autoGainControl: isNoiseCancelOn 
+                } 
+            });
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            source = audioCtx.createMediaStreamSource(stream);
+            
+            setupAudioNodes(source, true);
+
+            recordDestination = audioCtx.createMediaStreamDestination();
+            gainNode.connect(recordDestination);
+
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+        }
+
+        // 録音中にノイズキャンセルのON/OFFが切り替わった際の即時反映処理
+        async function restartRecordingStream() {
+            if (!isRecording || !mediaRecorder) return;
+            
+            // 現在のレコーダーを一時停止させずに、ストリームだけを入れ替える
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            
+            try {
+                // 新しいノイズキャンセル設定でストリームを取得し直す
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn } 
+                });
+                
+                const newSource = audioCtx.createMediaStreamSource(stream);
+                
+                // ノードを再接続
+                eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+                eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+                eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+                gainNode = audioCtx.createGain();
+                analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.75;
+
+                newSource.connect(eqLow);
+                eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
+                gainNode.connect(analyser);
+                
+                // 既存の録音用MediaStreamDestinationへ繋ぎ直す
+                gainNode.connect(recordDestination);
+                syncAudioParams();
+
+            } catch (err) {
+                console.error("ストリームの動的切り替えに失敗しました:", err);
             }
         }
 
@@ -756,19 +908,8 @@
             try {
                 unlockMenus();
 
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
-                });
-                
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                source = audioCtx.createMediaStreamSource(stream);
-                
-                setupAudioNodes(source, true);
+                await startRecordingStream();
 
-                recordDestination = audioCtx.createMediaStreamDestination();
-                gainNode.connect(recordDestination);
-
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
                 isRecording = true;
                 draw();
 
@@ -853,7 +994,9 @@
             eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
             eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
             gainNode = audioCtx.createGain();
+            
             analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.75; 
 
             audioSource.connect(eqLow);
             eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
@@ -973,6 +1116,7 @@
             const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
+            rAnalyser.smoothingTimeConstant = 0.75;
 
             bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rGain.connect(rAnalyser);
             rGain.connect(renderAudioCtx.destination);
