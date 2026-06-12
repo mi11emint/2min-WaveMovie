@@ -99,7 +99,6 @@
             align-items: center;
             background-size: cover;
             background-position: center;
-            position: relative;
         }
 
         .canvas-container {
@@ -327,28 +326,6 @@
         .audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
         .audio-reset-btn:active { transform: scale(0.98); }
 
-        /* 新設：通知メッセージポップ用のスタイル */
-        .toast-message-zone {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 0.65rem;
-            letter-spacing: 1px;
-            text-align: center;
-            margin-top: 10px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            line-height: 1.4;
-        }
-        .toast-message-zone.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
         .bottom-info-zone {
             width: 100%;
             max-width: 420px; 
@@ -525,8 +502,6 @@
 
                 <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE CANCEL: OFF</button>
                 <button id="audioResetBtn" class="audio-reset-btn">RESET AUDIO</button>
-
-                <div id="toastMessage" class="toast-message-zone"></div>
             </div>
         </div>
 
@@ -630,7 +605,6 @@
         
         const noiseCancelBtn = document.getElementById('noiseCancelBtn');
         const audioResetBtn = document.getElementById('audioResetBtn'); 
-        const toastMessage = document.getElementById('toastMessage'); // メッセージ要素の取得
         
         const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
         const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
@@ -993,7 +967,7 @@
                 mediaRecorder.start();
                 recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
                 timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
-            } catch (err) { alert("マイクの起動に失敗しました꙳☄︎ 端末の権限設定をご確認ください: " + err); }
+            } catch (err) { alert("マイクの起動に失敗しました꙳☄︎ 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); }
         });
 
         stopBtn.addEventListener('click', () => { stopRecording(); });
@@ -1032,7 +1006,7 @@
         }
 
         resetBtn.addEventListener('click', () => {
-            if (confirm("現在の状態をクリアして、最初からやり直しますか？")) { resetDataWithoutPrompt(); showToast("リセットしました。新しく録音できます^.ˬ.^ฅⳊ", 3000); }
+            if (confirm("これは録音リセットボタンです。現在の状態をクリアして、最初からやり直しますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
@@ -1045,10 +1019,10 @@
         }
 
         playPauseBtn.addEventListener('click', () => {
-            if (!audioBlobUrl || !playbackAudio) { showToast("再生する音声がありません。先に録音を完了させてください^.ˬ.^ฅⳊ", 3000); return; }
+            if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
             if (playbackAudio.paused) {
                 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-                playbackAudio.play().then(() => { isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE; draw(); }).catch(err => { showToast("再生に失敗しました。", 3000); });
+                playbackAudio.play().then(() => { isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE; draw(); }).catch(err => { alert("再生に失敗しました。"); });
             } else { playbackAudio.pause(); playPauseImg.src = IMG_PLAY; }
         });
         seekBar.addEventListener('input', () => { if (!playbackAudio) return; isUserChangingIndex = true; playbackAudio.currentTime = seekBar.value; });
@@ -1062,26 +1036,22 @@
             if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
         }
 
-        // 新設：画面下部にメッセージを表示する関数
-        function showToast(message, duration = null) {
-            toastMessage.innerText = message;
-            toastMessage.classList.add('show');
-            if (duration) {
-                setTimeout(() => {
-                    toastMessage.classList.remove('show');
-                }, duration);
-            }
-        }
-
         // ===================================================
-        // 【修正】OK不要で、画面上に開始・完了をシームレスに通知するロジック
+        // 【修正】確実性を重視：OK / CANCEL の選択肢ありポップアップを完全復活
         // ===================================================
         downloadBtn.addEventListener('click', async () => {
-            if (!audioBlob) { showToast("保存する動画がありません^.ˬ.^ฅⳊ", 3000); return; }
-            downloadBtn.style.pointerEvents = 'none';
+            if (!audioBlob) { alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ"); return; }
 
-            // ボタンを押した瞬間にOKを求めずメッセージを常時表示
-            showToast("動画の書き出しを開始します…✶⋆.˚꩜\n数秒かかりますのでそのままお待ちください。");
+            // OK（保存開始）と CANCEL（キャンセル）の確認ポップアップ
+            const userChoice = confirm("動画の保存を開始します。数秒かかりますがよろしいですか？\n[OK] で保存を開始、[キャンセル] で戻ります^.ˬ.^ฅⳊ");
+            
+            // キャンセルが押されたら処理をここで完全にストップする
+            if (!userChoice) {
+                return; 
+            }
+
+            // OKが押されたので処理を実行
+            downloadBtn.style.pointerEvents = 'none';
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const arrayBuffer = await audioBlob.arrayBuffer();
@@ -1116,10 +1086,11 @@
                 const finalVideoUrl = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                
                 downloadBtn.style.pointerEvents = 'auto'; 
                 
-                // 完了時もalertを使わず、自動で閉じるメッセージを表示
-                showToast("動画の保存が完了しました！^.ˬ.^ฅⳊ", 3500);
+                // 保存完了時も、スマホが次の処理へ進みやすいようにポップアップで通知
+                alert("お待たせしました！動画の保存が完了しました^.ˬ.^ฅⳊ");
             };
 
             movieRecorder.start(); bufferSource.start(0);
