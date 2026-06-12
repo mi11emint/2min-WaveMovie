@@ -123,10 +123,6 @@
             display: block;
         }
 
-        video {
-            display: none;
-        }
-
         .timer-display {
             position: absolute;
             top: 15px;
@@ -415,7 +411,6 @@
             <div class="player-panel" id="playerPanel">
                 <div id="canvasBg" class="canvas-container">
                     <canvas id="waveCanvas" width="600" height="600"></canvas>
-                    <video id="previewVideo" playsinline></video>
                     <div id="timer" class="timer-display">02:00</div>
                 </div>
                 
@@ -513,7 +508,6 @@
     <script>
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
-        const video = document.getElementById('previewVideo');
         
         const recBtn = document.getElementById('recBtn');
         const stopBtn = document.getElementById('stopBtn');
@@ -539,13 +533,20 @@
         const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
         const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
 
-        let audioCtx, analyser, source, dataArray, stream;
-        let animationId;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let audioBlobUrl = null; 
+        let audioCtx = null;
+        let analyser = null;
+        let source = null;
+        let dataArray = null;
+        let stream = null;
+        let animationId = null;
         
-        let timerInterval;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let audioBlob = null;
+        let audioBlobUrl = null; 
+        let playbackAudio = null; // スマホ安全のための実音声要素
+
+        let timerInterval = null;
         let timeLeft = 120;
 
         let currentBgColor = 'black';
@@ -555,14 +556,13 @@
         let isRecording = false;
         let isPlayingRecorded = false;
 
-        let gainNode, eqLow, eqMid, eqHigh, recordDestination, audioNodeForPlayback;
+        let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, recordDestination = null;
 
+        // 初期描画
         drawStaticWave();
 
         function triggerUIRefresh() {
-            if (isRecording || isPlayingRecorded) {
-                // 稼働中は自動反映されるため何もしない
-            } else {
+            if (!isRecording && !isPlayingRecorded) {
                 drawStaticWave();
             }
         }
@@ -600,26 +600,30 @@
             });
         });
 
-        volSlider.addEventListener('input', () => { if (gainNode) gainNode.gain.value = volSlider.value; });
-        eqLowSlider.addEventListener('input', () => { if (eqLow) eqLow.gain.value = eqLowSlider.value; });
-        eqMidSlider.addEventListener('input', () => { if (eqMid) eqMid.gain.value = eqMidSlider.value; });
-        eqHighSlider.addEventListener('input', () => { if (eqHigh) eqHigh.gain.value = eqHighSlider.value; });
+        function syncAudioParams() {
+            if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
+            if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
+            if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
+            if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
+        }
+
+        volSlider.addEventListener('input', syncAudioParams);
+        eqLowSlider.addEventListener('input', syncAudioParams);
+        eqMidSlider.addEventListener('input', syncAudioParams);
+        eqHighSlider.addEventListener('input', syncAudioParams);
 
         audioResetBtn.addEventListener('click', () => {
             volSlider.value = 1.0; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
-            if (gainNode) gainNode.gain.value = 1.0;
-            if (eqLow) eqLow.gain.value = -7;
-            if (eqMid) eqMid.gain.value = 3;
-            if (eqHigh) eqHigh.gain.value = -4;
+            syncAudioParams();
         });
 
-        function clearCanvas() {
-            ctx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function clearCanvas(targetCtx, w, h) {
+            targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+            targetCtx.fillRect(0, 0, w, h);
         }
 
         function drawStaticWave() {
-            clearCanvas();
+            clearCanvas(ctx, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
             gradient.addColorStop(1, currentWaveColors[1]);
@@ -704,7 +708,6 @@
                     const h = Math.max(8, audioValue * 280); 
                     const x = 50 + i * spacing;
                     
-                    // 全環境で100%バグらない超安全な塗りつぶしコードに変更！
                     targetCtx.fillRect(x, centerY - (h / 2), 2.5, h);
                 }
             }
@@ -736,9 +739,30 @@
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                 
                 mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                    audioBlobUrl = URL.createObjectURL(blob);
-                    video.src = audioBlobUrl; 
+                    audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    audioBlobUrl = URL.createObjectURL(audioBlob);
+                    
+                    playbackAudio = new Audio(audioBlobUrl);
+                    playbackAudio.preload = "auto";
+                    
+                    playbackAudio.addEventListener('loadedmetadata', () => {
+                        seekBar.max = playbackAudio.duration;
+                        seekBar.value = 0;
+                    });
+                    playbackAudio.addEventListener('timeupdate', () => {
+                        if (!isUserChangingIndex && playbackAudio.duration) {
+                            seekBar.value = playbackAudio.currentTime;
+                        }
+                    });
+                    playbackAudio.addEventListener('ended', () => {
+                        playPauseImg.src = IMG_PLAY;
+                        isPlayingRecorded = false;
+                        if (animationId) cancelAnimationFrame(animationId);
+                        playbackAudio.currentTime = 0;
+                        seekBar.value = 0;
+                        drawStaticWave();
+                    });
+
                     downloadBtn.classList.add('ready');
                     playPauseImg.src = IMG_PLAY;
                 };
@@ -776,15 +800,17 @@
 
         function setupAudioNodes() {
             if (!audioCtx) return;
-            eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320; eqLow.gain.value = eqLowSlider.value;
-            eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000; eqMid.gain.value = eqMidSlider.value;
-            eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200; eqHigh.gain.value = eqHighSlider.value;
-            gainNode = audioCtx.createGain(); gainNode.gain.value = volSlider.value;
+            eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+            eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+            eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+            gainNode = audioCtx.createGain();
             analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
 
             if(source) source.connect(eqLow);
             eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
             gainNode.connect(analyser);
+            
+            syncAudioParams();
         }
 
         function updateTimerText() {
@@ -795,68 +821,74 @@
         resetBtn.addEventListener('click', () => {
             if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
                 resetDataWithoutPrompt();
-                alert("リセットしました。録音ボタンを押すと新しく録音できます^.ˬ.^ฅⳊ");
+                alert("リセットしました。録音ボタンを押すと新しく録音できます^.ˬ.^");
             }
         });
 
         function resetDataWithoutPrompt() {
-            video.pause(); video.src = "";
+            if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
             if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
+            audioBlob = null;
             seekBar.value = 0;
             playPauseImg.src = IMG_PLAY; 
             downloadBtn.classList.remove('ready');
             if (animationId) cancelAnimationFrame(animationId);
             isPlayingRecorded = false; isRecording = false;
-            audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null;
+            audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null;
             drawStaticWave();
         }
 
         playPauseBtn.addEventListener('click', () => {
-            if (!audioBlobUrl) { alert("再生する音声がありません。先に録音を完了させてください。"); return; }
+            if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください。"); return; }
             
-            if (video.paused) {
-                if (!audioCtx) {
+            if (playbackAudio.paused) {
+                if (!source) {
                     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    audioNodeForPlayback = audioCtx.createMediaElementSource(video);
-                    source = audioNodeForPlayback;
+                    source = audioCtx.createMediaElementSource(playbackAudio);
                     setupAudioNodes();
                     gainNode.connect(audioCtx.destination);
                     dataArray = new Uint8Array(analyser.frequencyBinCount);
                 }
-                video.play();
-                isPlayingRecorded = true;
-                playPauseImg.src = IMG_PAUSE; 
-                draw();
+                playbackAudio.play().then(() => {
+                    isPlayingRecorded = true;
+                    playPauseImg.src = IMG_PAUSE; 
+                    draw();
+                }).catch(err => {
+                    alert("再生に失敗しました。画面を一度タップしてからもう一度お試しください。");
+                });
             } else {
-                video.pause();
+                playbackAudio.pause();
                 playPauseImg.src = IMG_PLAY; 
             }
         });
 
-        video.addEventListener('loadedmetadata', () => { seekBar.max = video.duration; seekBar.value = 0; });
-        video.addEventListener('timeupdate', () => { if (!isUserChangingIndex && video.duration) seekBar.value = video.currentTime; });
-        video.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; isPlayingRecorded = false; cancelAnimationFrame(animationId); video.currentTime = 0; seekBar.value = 0; drawStaticWave(); });
-        seekBar.addEventListener('input', () => { if (!audioBlobUrl) return; isUserChangingIndex = true; video.currentTime = seekBar.value; });
+        seekBar.addEventListener('input', () => { 
+            if (!playbackAudio) return; 
+            isUserChangingIndex = true; 
+            playbackAudio.currentTime = seekBar.value; 
+        });
         seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
         function draw() {
             if (!isRecording && !isPlayingRecorded) return;
             animationId = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-            
-            clearCanvas();
-            drawWaveLogic(ctx, canvas, dataArray);
+            if (analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+            }
+            clearCanvas(ctx, canvas.width, canvas.height);
+            if (dataArray) {
+                drawWaveLogic(ctx, canvas, dataArray);
+            }
         }
 
         downloadBtn.addEventListener('click', async () => {
-            if (!audioBlobUrl) { alert("保存する動画がありません。先に○ボタンから録音を完了させてください.꙳☄︎ᐧ"); return; }
+            if (!audioBlob) { alert("保存する動画がありません。先に○ボタンから録音を完了させてください.꙳☄︎ᐧ"); return; }
             
             downloadBtn.style.pointerEvents = 'none';
             alert("動画の書き出しを開始します。完了するまでブラウザを閉じずにお待ちください...^.ˬ.^");
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const response = await fetch(audioBlobUrl);
-            const arrayBuffer = await response.arrayBuffer();
+            const arrayBuffer = await audioBlob.arrayBuffer();
             const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
 
             const bufferSource = renderAudioCtx.createBufferSource();
@@ -868,4 +900,65 @@
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
 
-            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rGain
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rGain); rGain.connect(rAnalyser);
+            rGain.connect(renderAudioCtx.destination);
+
+            const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
+            
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = 600; captureCanvas.height = 600;
+            const rCtx = captureCanvas.getContext('2d');
+            const canvasStream = captureCanvas.captureStream(30);
+
+            const renderDest = renderAudioCtx.createMediaStreamDestination();
+            rGain.connect(renderDest);
+
+            const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
+            const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+            const movieRecorder = new MediaRecorder(combinedStream, options);
+            const movieChunks = [];
+
+            movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
+            
+            movieRecorder.onstop = () => {
+                const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
+                const finalVideoUrl = URL.createObjectURL(finalBlob);
+                const a = document.createElement('a');
+                a.href = finalVideoUrl;
+                a.download = `voice-wave-${Date.now()}.webm`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                
+                downloadBtn.style.pointerEvents = 'auto';
+                alert("動画の保存が完了しました！🎉");
+            };
+
+            movieRecorder.start();
+            bufferSource.start(0);
+
+            const startTime = performance.now();
+            const duration = audioBuffer.duration * 1000;
+
+            function renderFrame() {
+                const now = performance.now();
+                const elapsed = now - startTime;
+
+                rAnalyser.getByteFrequencyData(rDataArray);
+                
+                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
+
+                drawWaveLogic(rCtx, captureCanvas, rDataArray);
+
+                if (elapsed < duration) {
+                    requestAnimationFrame(renderFrame);
+                } else {
+                    bufferSource.stop();
+                    movieRecorder.stop();
+                    renderAudioCtx.close();
+                }
+            }
+            renderFrame();
+        });
+    </script>
+</body>
+</html>
