@@ -617,7 +617,6 @@
         let isPlayingRecorded = false;
         let isNoiseCancelOn = false; 
 
-        // ノイズキャンセルによる「こもり」を解消する輪郭補正用フィルターを追加
         let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
 
         unlockMenus();
@@ -668,7 +667,6 @@
             if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
             if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
             
-            // ノイズキャンセルONの時、削られがちな高域の抜け（2000Hz辺り）を自動で5.0dB補正増幅する
             if (ncFilter) {
                 ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
             }
@@ -691,7 +689,7 @@
             if (isRecording) {
                 restartRecordingStream();
             } else if (playbackAudio) {
-                syncAudioParams(); // 再生中の場合はフィルター強度を切り替え
+                syncAudioParams();
             }
         });
 
@@ -760,7 +758,7 @@
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
                     const boosted = getBoostedValue(dataArr[i]); 
-                    const waveLength = Math.max(3, boosted * 120); 
+                    const waveLength = Math.max(3, boosted * 102); 
                     
                     const startX = centerX + Math.cos(angle) * baseRadius;
                     const startY = centerY + Math.sin(angle) * baseRadius;
@@ -777,7 +775,7 @@
                     const dataIndex = Math.floor((i / barCount) * points);
                     
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveLength = Math.max(8, boosted * 125); 
+                    const waveLength = Math.max(8, boosted * 106); 
                     
                     const startX = centerX + Math.cos(angle) * baseRadius;
                     const startY = centerY + Math.sin(angle) * baseRadius;
@@ -798,7 +796,7 @@
                     if (dataArr[dataIndex] > 0) hasAudio = true;
 
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveHeight = boosted * 145; 
+                    const waveHeight = boosted * 123; 
                     
                     const x = 40 + i * spacing;
                     coords.push({x, waveHeight});
@@ -879,14 +877,12 @@
                 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
                 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
                 
-                // こもり解消用フィルターを再生成
                 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 
                 gainNode = audioCtx.createGain();
                 analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
                 analyser.smoothingTimeConstant = 0.75;
 
-                // 新しい接続ルート
                 newSource.connect(eqLow);
                 eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
                 gainNode.connect(analyser);
@@ -991,7 +987,6 @@
             eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
             eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
             
-            // こもりを打ち消す抜け感（2.2kHz周辺）を作る補正フィルターを設定
             ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 
             gainNode = audioCtx.createGain();
@@ -1114,7 +1109,6 @@
             const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
             const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
             
-            // 保存用動画にも同じ補正を適用
             const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
 
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
@@ -1122,7 +1116,9 @@
             rAnalyser.smoothingTimeConstant = 0.75;
 
             bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
-            rGain.connect(renderAudioCtx.destination);
+            
+            // 【重要】動画解析用コンテキストのスピーカー宛て出力を切断し、完全無音化。
+            // rGain.connect(renderAudioCtx.destination); <- この行を削除
 
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
