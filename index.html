@@ -351,7 +351,6 @@
         .pointer { visibility: hidden; margin-right: 4px; }
         .color-option.active .pointer, .style-option.active .pointer { visibility: visible; }
 
-        /* ロック状態の見た目 */
         .setting-section.locked {
             opacity: 0.3 !important;
             pointer-events: none !important;
@@ -729,7 +728,6 @@
             resetDataWithoutPrompt();
 
             try {
-                // メニューロック解除
                 menuBg.classList.remove('locked');
                 menuStyle.classList.remove('locked');
                 menuColor.classList.remove('locked');
@@ -741,7 +739,8 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 source = audioCtx.createMediaStreamSource(stream);
                 
-                setupAudioNodes();
+                // 【ハウリング対策】第2引数に true を渡し、録音中はスピーカーへの出力を「切断」する
+                setupAudioNodes(source, true);
 
                 recordDestination = audioCtx.createMediaStreamDestination();
                 gainNode.connect(recordDestination);
@@ -761,9 +760,10 @@
                     playbackAudio = new Audio(audioBlobUrl);
                     playbackAudio.preload = "auto";
                     
-                    // 【超安定化】スマホでのフリーズを避けるため、録音時のAudioContextに再生プレイヤーをここでガチガチに紐付け固定する
-                    source = audioCtx.createMediaElementSource(playbackAudio);
-                    source.connect(eqLow); // マイク用だったEQ回路へそのままドッキング
+                    // 録音プレイヤーと回路をガッチリ連結
+                    const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+                    // 【ハウリング対策】再生時はスピーカーから音を鳴らしたいので、第2引数を false にして再構築
+                    setupAudioNodes(playbackSource, false);
 
                     playbackAudio.addEventListener('loadedmetadata', () => {
                         seekBar.max = playbackAudio.duration;
@@ -786,7 +786,7 @@
                     downloadBtn.classList.add('ready');
                     playPauseImg.src = IMG_PLAY;
 
-                    // 録音停止したのでメニューをガチガチにロック
+                    // 録音完了後のパレット完全ロック
                     menuBg.classList.add('locked');
                     menuStyle.classList.add('locked');
                     menuColor.classList.add('locked');
@@ -823,20 +823,25 @@
             drawStaticWave();
         }
 
-        function setupAudioNodes() {
-            if (!audioCtx) return;
+        // 【ハウリング対策】引数にaudioSourceとisMuteSpeakerを追加
+        function setupAudioNodes(audioSource, isMuteSpeaker) {
+            if (!audioCtx || !audioSource) return;
+            
             eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
             eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
             eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
             gainNode = audioCtx.createGain();
             analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
 
-            if(source) source.connect(eqLow);
+            audioSource.connect(eqLow);
             eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
             
-            // 再生時に自分のイヤホンやスピーカーから音が鳴るように最終出力へ接続
-            gainNode.connect(audioCtx.destination);
             gainNode.connect(analyser);
+            
+            // 録音中(isMuteSpeaker=true)なら、スマホのスピーカー(destination)には絶対に音を繋がない！
+            if (!isMuteSpeaker) {
+                gainNode.connect(audioCtx.destination);
+            }
             
             syncAudioParams();
         }
@@ -864,7 +869,6 @@
             isPlayingRecorded = false; isRecording = false;
             audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
             
-            // ロック解除
             menuBg.classList.remove('locked');
             menuStyle.classList.remove('locked');
             menuColor.classList.remove('locked');
@@ -876,7 +880,6 @@
             if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください。"); return; }
             
             if (playbackAudio.paused) {
-                // スマホのセキュリティ制限解除のため、中断されていたContextを再開させてから再生
                 if (audioCtx && audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
@@ -964,32 +967,4 @@
             };
 
             movieRecorder.start();
-            bufferSource.start(0);
-
-            const startTime = performance.now();
-            const duration = audioBuffer.duration * 1000;
-
-            function renderFrame() {
-                const now = performance.now();
-                const elapsed = now - startTime;
-
-                rAnalyser.getByteFrequencyData(rDataArray);
-                
-                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-
-                drawWaveLogic(rCtx, captureCanvas, rDataArray);
-
-                if (elapsed < duration) {
-                    requestAnimationFrame(renderFrame);
-                } else {
-                    bufferSource.stop();
-                    movieRecorder.stop();
-                    renderAudioCtx.close();
-                }
-            }
-            renderFrame();
-        });
-    </script>
-</body>
-</html>
+            bufferSource
