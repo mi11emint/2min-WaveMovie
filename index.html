@@ -114,7 +114,7 @@
         }
         
         .canvas-container.theme-white {
-            background-color: #ffffff
+            background-color: #ffffff;
         }
 
         canvas {
@@ -578,9 +578,9 @@
             title: "JUNE COLOR", // 表示するタイトル
             patterns: [
                 ["#f3f3f3", "#e7e7eb", "#dcdddd"],
-                ["#83B2E7", "#D9EEF7", "		#D0E03D"],
-                ["#A789E9", "white", "#EEB4D4"],
-                ["#D2140B", "#F8481F", "		#ECD3B5"]
+                ["#D0E03D", "#83B2E7", "#C4DDE7"],
+                ["#EE97E8", "#BECBF3", "#8158E0"],
+                ["#D2140B", "#F8481F", "#ECD3B5"]
             ]
         };
 
@@ -1076,7 +1076,14 @@
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
             const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rGain.connect(rAnalyser);
+            // 🌟 修正ポイント: 音声処理ノードを順番に正しく直列で接続する
+            bufferSource.connect(rEqLow);
+            rEqLow.connect(rEqMid);
+            rEqMid.connect(rEqHigh);
+            rEqHigh.connect(rNcFilter);
+            rNcFilter.connect(rGain);
+            rGain.connect(rAnalyser); // アナライザーを音の流れの末尾に接続
+            
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
             const captureCanvas = document.createElement('canvas');
