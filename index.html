@@ -513,8 +513,8 @@
 
             <div class="setting-section" id="menuStyle">
                 <div class="setting-title">WAVE STYLE</div>
-                <div id="styleCircle" class="style-option active" data-style="circle"><span class="pointer">▶</span>CIRCLE</div>
-                <div id="styleDigitalCircle" class="style-option" data-style="digital_circle"><span class="pointer">▶</span>DIGITAL</div>
+                <div id="styleCorona" class="style-option active" data-style="corona"><span class="pointer">▶</span>CORONA</div>
+                <div id="styleStar" class="style-option" data-style="star"><span class="pointer">▶</span>STAR</div>
                 <div id="styleAurora" class="style-option" data-style="aurora"><span class="pointer">▶</span>AURORA</div>
             </div>
 
@@ -610,9 +610,8 @@
         let timeLeft = 120;
 
         let currentBgColor = 'black';
-        // 初期の選択パレット(cp1)に合わせて初期色を設定
         let currentWaveColors = ["#fff0f5", "#faf0e6"];
-        let currentWaveStyle = 'circle'; 
+        let currentWaveStyle = 'corona'; // 初期選択をcoronaに変更
         let isUserChangingIndex = false;
         let isRecording = false;
         let isPlayingRecorded = false;
@@ -720,15 +719,15 @@
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
 
-            if (currentWaveStyle === 'circle') {
+            if (currentWaveStyle === 'corona') {
                 ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
-            } else if (currentWaveStyle === 'digital_circle') {
+            } else if (currentWaveStyle === 'star') {
                 const centerX = canvas.width / 2; const centerY = canvas.height / 2;
                 const baseRadius = 140;
-                for (let i = 0; i < 45; i++) {
-                    const angle = (i / 45) * Math.PI * 2;
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
+                for (let i = 0; i < 48; i++) {
+                    const angle = (i / 48) * Math.PI * 2;
+                    const startX = centerX + Math.cos(angle) * (baseRadius - 8);
+                    const startY = centerY + Math.sin(angle) * (baseRadius - 8);
                     const endX = centerX + Math.cos(angle) * (baseRadius + 8);
                     const endY = centerY + Math.sin(angle) * (baseRadius + 8);
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
@@ -752,42 +751,79 @@
             targetCtx.lineCap = 'round';
             
             const points = dataArr.length;
+            const centerX = targetCanvas.width / 2; 
+            const centerY = targetCanvas.height / 2;
 
-            if (currentWaveStyle === 'circle') {
-                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
+            if (currentWaveStyle === 'corona') {
                 const baseRadius = 140;
+                const coords = [];
+                
+                // 円周上の座標を滑らかに1周分計算
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
                     const boosted = getBoostedValue(dataArr[i]); 
                     const waveLength = Math.max(3, boosted * 102); 
+                    const r = baseRadius + waveLength;
                     
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
-                    const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-                    const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                    coords.push({
+                        x: centerX + Math.cos(angle) * r,
+                        y: centerY + Math.sin(angle) * r
+                    });
                 }
-            } else if (currentWaveStyle === 'digital_circle') {
-                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
-                const baseRadius = 135;
+                
+                // 滑らかなベタ塗り曲線の描画（AURORAの円形応用）
+                targetCtx.beginPath();
+                targetCtx.moveTo(coords[0].x, coords[0].y);
+                
+                for (let i = 0; i < points; i++) {
+                    const curr = coords[i];
+                    const next = coords[(i + 1) % points];
+                    const cpX = (curr.x + next.x) / 2;
+                    const cpY = (curr.y + next.y) / 2;
+                    targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
+                }
+                
+                targetCtx.closePath();
+                
+                // 内側を丸くくり抜いて「ドーナツ状（コロナ）」にする
+                targetCtx.save();
+                targetCtx.globalAlpha = 0.9;
+                targetCtx.fill(); // 外側のウネウネを塗りつぶし
+                
+                // 背景色で中央をくり抜く
+                targetCtx.globalCompositeOperation = 'destination-out';
+                targetCtx.beginPath();
+                targetCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.restore();
+                
+            } else if (currentWaveStyle === 'star') {
+                const baseRadius = 138;
                 const barCount = 48; 
+                
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
                     const dataIndex = Math.floor((i / barCount) * points);
                     
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveLength = Math.max(8, boosted * 106); 
+                    const waveLength = Math.max(2, boosted * 85); // 外にも内にも広がるので少し長さを調整
                     
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
+                    // 外側への線と、内側への線（鏡合わせ）を一本の直線として描画
+                    const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
+                    const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
                     const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
                     const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                    
+                    targetCtx.beginPath(); 
+                    targetCtx.moveTo(startX, startY); 
+                    targetCtx.lineTo(endX, endY); 
+                    targetCtx.stroke();
                 }
+                
             } else if (currentWaveStyle === 'aurora') {
                 const usedPoints = 32; 
                 const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
-                const centerY = targetCanvas.height / 2;
+                const activeCenterY = targetCanvas.height / 2;
 
                 const coords = [];
                 let hasAudio = false;
@@ -805,32 +841,32 @@
 
                 if (!hasAudio) {
                     targetCtx.beginPath();
-                    targetCtx.moveTo(40, centerY);
-                    targetCtx.lineTo(targetCanvas.width - 40, centerY);
+                    targetCtx.moveTo(40, activeCenterY);
+                    targetCtx.lineTo(targetCanvas.width - 40, activeCenterY);
                     targetCtx.stroke();
                     return;
                 }
 
                 targetCtx.beginPath();
-                targetCtx.moveTo(coords[0].x, centerY - coords[0].waveHeight);
+                targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
 
                 for (let i = 1; i < usedPoints; i++) {
                     const prev = coords[i - 1];
                     const curr = coords[i];
                     const cpX = (prev.x + curr.x) / 2;
-                    const prevY = centerY - prev.waveHeight;
-                    const currY = centerY - curr.waveHeight;
+                    const prevY = activeCenterY - prev.waveHeight;
+                    const currY = activeCenterY - curr.waveHeight;
                     targetCtx.bezierCurveTo(cpX, prevY, cpX, currY, curr.x, currY);
                 }
 
-                targetCtx.lineTo(coords[usedPoints - 1].x, centerY + coords[usedPoints - 1].waveHeight);
+                targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
 
                 for (let i = usedPoints - 1; i > 0; i--) {
                     const curr = coords[i];
                     const next = coords[i - 1];
                     const cpX = (curr.x + next.x) / 2;
-                    const currY = centerY + curr.waveHeight;
-                    const nextY = centerY + next.waveHeight;
+                    const currY = activeCenterY + curr.waveHeight;
+                    const nextY = activeCenterY + next.waveHeight;
                     targetCtx.bezierCurveTo(cpX, currY, cpX, nextY, next.x, nextY);
                 }
 
