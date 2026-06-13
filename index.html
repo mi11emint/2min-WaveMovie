@@ -805,7 +805,8 @@
                     const dataIdx = Math.floor(mapRatio * (validRange - 1));
                     
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    const waveLength = Math.max(3, boosted * 95); 
+                    // 【変更】最低値を3から6に引き上げ、大音量時の倍率を95から120に拡大
+                    const waveLength = 6 + (boosted * 120); 
                     const r = baseRadius + waveLength;
                     
                     coords.push({
@@ -847,7 +848,8 @@
                     const dataIdx = Math.floor(mapRatio * (validRange - 1));
                     
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    const waveLength = Math.max(2, boosted * 80); 
+                    // 【変更】最低値を2から5に引き上げ、大音量時の倍率を80から100に拡大
+                    const waveLength = 5 + (boosted * 100); 
                     
                     const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
                     const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -865,25 +867,16 @@
                 const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
                 const activeCenterY = targetCanvas.height / 2;
                 const coords = [];
-                let hasAudio = false;
 
                 for (let i = 0; i < usedPoints; i++) {
                     const dataIdx = Math.floor((i / usedPoints) * validRange);
-                    if (dataArr[dataIdx] > 0) hasAudio = true;
-
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    const waveHeight = boosted * 120; 
+                    // 【変更】無音でも3pxの揺らぎベースを残し、大音量時の倍率を120から155に拡大
+                    const waveHeight = 3 + (boosted * 155); 
                     coords.push({x: 40 + i * spacing, waveHeight});
                 }
 
-                if (!hasAudio) {
-                    targetCtx.beginPath();
-                    targetCtx.moveTo(40, activeCenterY);
-                    targetCtx.lineTo(targetCanvas.width - 40, activeCenterY);
-                    targetCtx.stroke();
-                    return;
-                }
-
+                // 【変更】無音時も常に波形を描画するため、一律で流れるように処理を一本化
                 targetCtx.beginPath();
                 targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
                 for (let i = 1; i < usedPoints; i++) {
@@ -1084,9 +1077,6 @@
                 
                 downloadBtn.style.pointerEvents = 'auto'; 
                 
-                // ===================================================
-                // 【復活・修正】保存完了ポップアップ後にデータを自動リセット
-                // ===================================================
                 resetDataWithoutPrompt();
                 alert("お待たせしました。動画の保存完了です！\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
             };
