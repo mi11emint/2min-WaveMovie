@@ -1006,7 +1006,7 @@
         }
 
         resetBtn.addEventListener('click', () => {
-            if (confirm("これは録音リセットボタンです^.ˬ.^ฅⳊ現在の状態をクリアして、最初からやり直しますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
+            if (confirm("これは録音リセットボタンです^.ˬ.^ฅⳊ　現在の状態をクリアして、最初からやりないしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
@@ -1036,24 +1036,16 @@
             if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
         }
 
-        // ===================================================
-        // 【修正】OK選択後、即座に保存中ポップアップを出すフローに変更
-        // ===================================================
         downloadBtn.addEventListener('click', async () => {
             if (!audioBlob) { alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ"); return; }
 
-            // 1. 最初の確認ポップアップ (OK / CANCEL)
             const userChoice = confirm("動画の保存を開始してよろしいですか？");
-            
-            // キャンセルが押されたら処理をここで完全にストップ
             if (!userChoice) {
                 return; 
             }
 
-            // 2. OKが押された直後に「保存しています」のポップアップを出す
-            alert("保存しています。ブラウザはそのままでお待ちください･･･");
+            alert("保存しています。30秒ほどかかることがあります。ブラウザを閉じずにお待ちください･･･");
 
-            // 保存処理の開始
             downloadBtn.style.pointerEvents = 'none';
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1092,8 +1084,11 @@
                 
                 downloadBtn.style.pointerEvents = 'auto'; 
                 
-                // 3. すべて完了したときのお知らせ
-                alert("お待たせしました！動画の保存が完了しました^.ˬ.^ฅⳊ");
+                // ===================================================
+                // 【復活・修正】保存完了ポップアップ後にデータを自動リセット
+                // ===================================================
+                resetDataWithoutPrompt();
+                alert("お待たせしました！　動画の保存が完了しました^.ˬ.^ฅⳊ\n\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
             };
 
             movieRecorder.start(); bufferSource.start(0);
