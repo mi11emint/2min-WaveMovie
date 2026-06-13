@@ -967,7 +967,7 @@
                 mediaRecorder.start();
                 recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
                 timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
-            } catch (err) { alert("マイクの起動に失敗しました꙳☄︎ 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); }
+            } catch (err) { alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); }
         });
 
         stopBtn.addEventListener('click', () => { stopRecording(); });
@@ -1006,7 +1006,7 @@
         }
 
         resetBtn.addEventListener('click', () => {
-            if (confirm("これは録音リセットボタンです^.ˬ.^ฅⳊ　現在の状態をクリアして、最初からやりないしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
+            if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
@@ -1022,7 +1022,7 @@
             if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
             if (playbackAudio.paused) {
                 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-                playbackAudio.play().then(() => { isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE; draw(); }).catch(err => { alert("再生に失敗しました。"); });
+                playbackAudio.play().then(() => { isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE; draw(); }).catch(err => { alert("再生に失敗しました"); });
             } else { playbackAudio.pause(); playPauseImg.src = IMG_PLAY; }
         });
         seekBar.addEventListener('input', () => { if (!playbackAudio) return; isUserChangingIndex = true; playbackAudio.currentTime = seekBar.value; });
@@ -1044,7 +1044,7 @@
                 return; 
             }
 
-            alert("保存しています。30秒ほどかかることがあります。ブラウザを閉じずにお待ちください･･･");
+            alert("30秒ほどかかることがあります。ブラウザを閉じずにお待ちください･･･");
 
             downloadBtn.style.pointerEvents = 'none';
 
@@ -1088,7 +1088,7 @@
                 // 【復活・修正】保存完了ポップアップ後にデータを自動リセット
                 // ===================================================
                 resetDataWithoutPrompt();
-                alert("お待たせしました！　動画の保存が完了しました^.ˬ.^ฅⳊ\n\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
+                alert("お待たせしました。動画の保存完了です！\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
             };
 
             movieRecorder.start(); bufferSource.start(0);
