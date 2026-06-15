@@ -813,7 +813,8 @@
             const centerX = targetCanvas.width / 2; 
             const centerY = targetCanvas.height / 2;
 
-            const validRange = Math.floor(dataArr.length * 0.82);
+            // 0.82 を 0.45 に変更して、高音の無音地帯をカット！
+            const validRange = Math.floor(dataArr.length * 0.50);
             const steps = 120; 
 
             if (currentWaveStyle === 'corona') {
