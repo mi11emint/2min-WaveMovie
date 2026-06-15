@@ -30,27 +30,36 @@
             overflow-x: hidden;
         }
 
-        /* --- 🌌 宇宙の背景エフェクト（流れ星削除済） --- */
-        #space-container {
+        /* --- 🌌 宇宙の背景エフェクト（超軽量・CSS版） --- */
+        body::before, body::after {
+            content: "";
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1; 
-            pointer-events: none; 
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            pointer-events: none;
         }
-
-        .star {
-            position: absolute;
-            background-color: #ffffff;
-            border-radius: 50%;
-            animation: twinkle linear infinite;
+        body::before {
+            background-image: 
+                radial-gradient(1.5px 1.5px at 20% 30%, #ffffff, rgba(0,0,0,0)), 
+                radial-gradient(2px 2px at 40% 70%, #ffffff, rgba(0,0,0,0)), 
+                radial-gradient(1.5px 1.5px at 60% 20%, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 15% 85%, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 85% 15%, #ffffff, rgba(0,0,0,0));
+            background-size: 350px 350px;
+            animation: twinkleCSS 4s infinite alternate ease-in-out;
         }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.2; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px #fff; }
+        body::after {
+            background-image: 
+                radial-gradient(1.5px 1.5px at 80% 50%, #ffffff, rgba(0,0,0,0)), 
+                radial-gradient(2px 2px at 30% 80%, #ffffff, rgba(0,0,0,0)), 
+                radial-gradient(1.5px 1.5px at 10% 40%, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 90% 90%, #ffffff, rgba(0,0,0,0));
+            background-size: 250px 250px;
+            animation: twinkleCSS 3s infinite alternate-reverse ease-in-out;
+        }
+        @keyframes twinkleCSS {
+            0% { opacity: 0.1; }
+            100% { opacity: 1; }
         }
         /* ------------------------------ */
 
@@ -431,8 +440,7 @@
     </style>
 </head>
 <body>
-    <div id="space-container"></div>
-
+<body>
     <div class="info-text-area">
         <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a></p>
         <p>声や音楽を視覚化して動画保存できます</p>
@@ -549,29 +557,6 @@
     </div>
 
     <script>
-        // --- 🌌 宇宙エフェクト初期化（瞬く星のみ） ---
-        const container = document.getElementById('space-container');
-        const starCount = 100;
-
-        for (let i = 0; i < starCount; i++) {
-            const star = document.createElement('div');
-            star.classList.add('star');
-            const size = Math.random() * 2 + 1;
-            const top = Math.random() * 100;
-            const left = Math.random() * 100;
-            const duration = Math.random() * 3 + 2;
-            const delay = Math.random() * 5;
-
-            star.style.width = `${size}px`;
-            star.style.height = `${size}px`;
-            star.style.top = `${top}%`;
-            star.style.left = `${left}%`;
-            star.style.animationDuration = `${duration}s`;
-            star.style.animationDelay = `-${delay}s`;
-            container.appendChild(star);
-        }
-        // ---------------------------------
-
         const MONTHLY_SETTING = {
             title: "JUNE COLOR", 
             patterns: [
@@ -766,11 +751,14 @@
             targetCtx.fillRect(0, 0, w, h);
         }
 
+        // --- 修正：波形の感度を下げる（しきい値の導入） ---
         function getBoostedValue(rawByteValue) {
-            const normalized = rawByteValue / 255;
-            if (normalized === 0) return 0;
-            return Math.sqrt(normalized);
+            const threshold = 25; // ここで25以下の細かいノイズを切り捨てています
+            if (rawByteValue < threshold) return 0;
+            const normalized = (rawByteValue - threshold) / (255 - threshold);
+            return Math.pow(normalized, 1.5); // より滑らかに反応するよう調整
         }
+        // --------------------------------------------------
 
         function drawStaticWave() {
             clearCanvas(ctx, canvas.width, canvas.height);
