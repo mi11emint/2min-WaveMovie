@@ -751,12 +751,14 @@
             targetCtx.fillRect(0, 0, w, h);
         }
 
-        // --- 修正：波形の感度を下げる（しきい値の導入） ---
+       // --- 修正：波形の感度を下げる（しきい値の導入） ---
         function getBoostedValue(rawByteValue) {
-            const threshold = 25; // ここで25以下の細かいノイズを切り捨てています
+            const threshold = 15; // カットするノイズの基準を少し優しくしました
             if (rawByteValue < threshold) return 0;
+            
+            // ゼロ付近のノイズ以外は、元の元気な計算式（Math.sqrt）を使ってダイナミックに揺らす！
             const normalized = (rawByteValue - threshold) / (255 - threshold);
-            return Math.pow(normalized, 1.5); // より滑らかに反応するよう調整
+            return Math.sqrt(normalized); 
         }
         // --------------------------------------------------
 
