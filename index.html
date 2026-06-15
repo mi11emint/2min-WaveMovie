@@ -30,6 +30,30 @@
             overflow-x: hidden;
         }
 
+        /* --- 🌌 宇宙の背景エフェクト（流れ星削除済） --- */
+        #space-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; 
+            pointer-events: none; 
+        }
+
+        .star {
+            position: absolute;
+            background-color: #ffffff;
+            border-radius: 50%;
+            animation: twinkle linear infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px #fff; }
+        }
+        /* ------------------------------ */
+
         .info-text-area {
             width: 100%;
             max-width: 420px; 
@@ -76,7 +100,7 @@
             display: flex;
             width: 100%;
             max-width: 420px; 
-            background-color: ;
+            background-color: transparent;
             align-items: stretch; 
             justify-content: center;
             margin: 10px 0 15px 0;
@@ -407,6 +431,8 @@
     </style>
 </head>
 <body>
+    <div id="space-container"></div>
+
     <div class="info-text-area">
         <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a></p>
         <p>声や音楽を視覚化して動画保存できます</p>
@@ -424,7 +450,7 @@
         <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>
         挙動がおかしいな？と思ったらページの更新(再読込)をしてください<br>
         録音中にブラウザを閉じると音が途切れるなど失敗の恐れがあります
-        </div></div>
+        </div>
     </div>
 
     <div class="main-container">
@@ -523,6 +549,29 @@
     </div>
 
     <script>
+        // --- 🌌 宇宙エフェクト初期化（瞬く星のみ） ---
+        const container = document.getElementById('space-container');
+        const starCount = 100;
+
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const size = Math.random() * 2 + 1;
+            const top = Math.random() * 100;
+            const left = Math.random() * 100;
+            const duration = Math.random() * 3 + 2;
+            const delay = Math.random() * 5;
+
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.top = `${top}%`;
+            star.style.left = `${left}%`;
+            star.style.animationDuration = `${duration}s`;
+            star.style.animationDelay = `-${delay}s`;
+            container.appendChild(star);
+        }
+        // ---------------------------------
+
         const MONTHLY_SETTING = {
             title: "JUNE COLOR", 
             patterns: [
