@@ -837,7 +837,7 @@ const mapRatio = i / barCount;
 const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 6 + (boosted * 200);
+const waveLength = 6 + (boosted * 170);
 
 // 内側の円周から、外側に向かって直線を引く
 const startX = centerX + Math.cos(angle) * baseRadius;
@@ -864,7 +864,7 @@ const mapRatio = i / barCount;
 const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 5 + (boosted * 200);
+const waveLength = 5 + (boosted * 170);
 
 const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
 const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -887,7 +887,7 @@ const coords = [];
 for (let i = 0; i < usedPoints; i++) {
 const dataIdx = Math.floor((i / usedPoints) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveHeight = 3 + (boosted * 300);
+const waveHeight = 3 + (boosted * 170);
 coords.push({x: 40 + i * spacing, waveHeight});
 }
 
@@ -936,7 +936,7 @@ const barWidth = spacing * 0.7; // バーの横幅（隙間に合わせた最適
 for (let i = 0; i < barCount; i++) {
 const dataIdx = Math.floor((i / barCount) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const barHeight = boosted * 400;
+const barHeight = boosted * 350;
 
 if (barHeight > 0) {
 const x = 40 + i * spacing + (spacing - barWidth) / 2;
