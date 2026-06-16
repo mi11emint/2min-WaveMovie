@@ -819,7 +819,7 @@ targetCtx.lineCap = 'round';
 const centerX = targetCanvas.width / 2;
 const centerY = targetCanvas.height / 2;
 
-const validRange = Math.floor(dataArr.length * 0.82);
+const validRange = 37;
 const steps = 120;
 
 if (currentWaveStyle === 'corona') {
@@ -837,7 +837,7 @@ const mapRatio = i / barCount;
 const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 6 + (boosted * 120);
+const waveLength = 6 + (boosted * 200);
 
 // 内側の円周から、外側に向かって直線を引く
 const startX = centerX + Math.cos(angle) * baseRadius;
@@ -864,7 +864,7 @@ const mapRatio = i / barCount;
 const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 5 + (boosted * 100);
+const waveLength = 5 + (boosted * 200);
 
 const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
 const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -887,7 +887,7 @@ const coords = [];
 for (let i = 0; i < usedPoints; i++) {
 const dataIdx = Math.floor((i / usedPoints) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveHeight = 3 + (boosted * 155);
+const waveHeight = 3 + (boosted * 300);
 coords.push({x: 40 + i * spacing, waveHeight});
 }
 
@@ -936,7 +936,7 @@ const barWidth = spacing * 0.7; // バーの横幅（隙間に合わせた最適
 for (let i = 0; i < barCount; i++) {
 const dataIdx = Math.floor((i / barCount) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const barHeight = boosted * 300;
+const barHeight = boosted * 400;
 
 if (barHeight > 0) {
 const x = 40 + i * spacing + (spacing - barWidth) / 2;
@@ -975,7 +975,7 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.75;
 newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser); gainNode.connect(recordDestination);
@@ -1000,7 +1000,7 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.75;
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
 audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser);
 if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
