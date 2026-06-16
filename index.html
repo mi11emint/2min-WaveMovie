@@ -477,8 +477,8 @@ max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短
 <div class="header-zone">
 <div class="title">2min VOICE and MUSIC WAVE MOVIE</div>
 <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>
-挙動がおかしいな？と思ったらページの更新(再読込)をしてください<br>
-録音中にブラウザを閉じると音が途切れるなど失敗の恐れがあります
+ページの更新(再読込)でフルリセットされます<br>
+録音中や保存中にブラウザを閉じると正常な動画が作れなくなります
 </div>
 </div>
 
@@ -1015,7 +1015,7 @@ timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).
 // メニューのロック／解放
 function lockMenus() {
 menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
-document.getElementById('menuPng').classList.add('locked'); // ★追加
+document.getElementById('menuTouka').classList.add('locked'); // ★追加
 }
 function unlockMenus() {
 menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
@@ -1097,7 +1097,7 @@ reader.readAsDataURL(file);
 
 // ★新規追加：透過度バーを操作したときの処理
 toukaSlider.addEventListener('input', () => {
-currentOpacity = parseFloat(opacitySlider.value);
+currentOpacity = parseFloat(toukaSlider.value);
 triggerUIRefresh();
 });
 
