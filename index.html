@@ -834,7 +834,8 @@ targetCtx.lineWidth = 2.5;              // 線がきれいに密集するよう�
 for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
-const dataIdx = Math.floor(mapRatio * (validRange - 1));
+// 3番目(60Hz)から46番目(1000Hz)の間を等間隔で割り振る
+const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveLength = 6 + (boosted * 150);
@@ -861,7 +862,8 @@ targetCtx.globalAlpha = currentOpacity;
 for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
-const dataIdx = Math.floor(mapRatio * (validRange - 1));
+// 3番目(60Hz)から46番目(1000Hz)の間を等間隔で割り振る
+const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveLength = 5 + (boosted * 150);
@@ -885,7 +887,8 @@ const activeCenterY = targetCanvas.height / 2;
 const coords = [];
 
 for (let i = 0; i < usedPoints; i++) {
-const dataIdx = Math.floor((i / usedPoints) * validRange);
+const mapRatio = i / usedPoints;
+const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveHeight = 3 + (boosted * 150);
 coords.push({x: 40 + i * spacing, waveHeight});
@@ -934,7 +937,8 @@ targetCtx.globalAlpha = currentOpacity;
 const barWidth = spacing * 0.7; // バーの横幅（隙間に合わせた最適な太さ）
 
 for (let i = 0; i < barCount; i++) {
-const dataIdx = Math.floor((i / barCount) * validRange);
+const mapRatio = i / barCount;
+const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const barHeight = boosted * 250;
 
