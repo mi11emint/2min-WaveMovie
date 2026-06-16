@@ -448,16 +448,16 @@ pointer-events: none;
 }
 
 /* --- 🎚️ 透過度バー専用の余白設定（新規追加） --- */
-.opacity-slider-zone {
+.touka-slider-zone {
 display: flex;
 align-items: center;
 gap: 10px;
-margin-top: 20px; /* カラーパレットとの間に一行空行を開ける */
+margin-top: 5px; /* カラーパレットとの間に一行空行を開ける */
 }
 
 /* 🌟ここを追加：透過度スライダーの最大横幅を制限する */
-#opacitySlider {
-max-width: 70px; /* 👈 この数字（70px）を小さくするとさらに短くなります */
+#toukaSlider {
+max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短くなります */
 }
 </style>
 </head>
@@ -563,9 +563,9 @@ max-width: 70px; /* 👈 この数字（70px）を小さくするとさらに短
 <div class="palette-grid" id="monthlyGrid"></div>
 </div>
 
-<div class="opacity-slider-zone" id="menuOpacity">
-<div style="font-size: 0.6rem; width: 42px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">OPACITY</div>
-<input type="range" id="opacitySlider" class="audio-slider" min="0.1" max="1.0" step="0.05" value="0.9">
+<div class="touka-slider-zone" id="menuTouka">
+<div style="font-size: 0.6rem; width: 42px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVEpng</div>
+<input type="range" id="toukaSlider" class="audio-slider" min="0.4" max="1.0" step="0.05" value="0.9">
 </div>
 </div>
 </div>
@@ -651,7 +651,7 @@ let source = null;
 let dataArray = null;
 let stream = null;
 let animationId = null;
-
+let isMovieRendering = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let audioBlob = null;
@@ -672,7 +672,7 @@ let isNoiseCancelOn = false;
 // --- 📸 追加要素と変数 ---
 const btnPicture = document.getElementById('btnPicture');
 const pictureInput = document.getElementById('pictureInput');
-const opacitySlider = document.getElementById('opacitySlider');
+const toukaSlider = document.getElementById('toukaSlider');
 
 let currentOpacity = 0.9; // 初期透過度
 let bgImage = null;       // 選択された背景画像オブジェクト
@@ -1015,11 +1015,11 @@ timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).
 // メニューのロック／解放
 function lockMenus() {
 menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
-document.getElementById('menuOpacity').classList.add('locked'); // ★追加
+document.getElementById('menuPng').classList.add('locked'); // ★追加
 }
 function unlockMenus() {
 menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
-document.getElementById('menuOpacity').classList.remove('locked'); // ★追加
+document.getElementById('menuTouka').classList.remove('locked'); // ★追加
 }
 // 録音データの内部完全リセット処理（確認ダイアログなし版）
 function resetDataWithoutPrompt() {
@@ -1096,7 +1096,7 @@ reader.readAsDataURL(file);
 });
 
 // ★新規追加：透過度バーを操作したときの処理
-opacitySlider.addEventListener('input', () => {
+toukaSlider.addEventListener('input', () => {
 currentOpacity = parseFloat(opacitySlider.value);
 triggerUIRefresh();
 });
@@ -1241,7 +1241,7 @@ const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voi
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
-
+isMovieRendering = false;
 const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
 
 if (finishGame) {
@@ -1249,7 +1249,7 @@ hideOverlayAndCleanup();
 alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
 }
 };
-
+isMovieRendering = true;
 movieRecorder.start(); bufferSource.start(0);
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
 
@@ -1264,11 +1264,25 @@ else { bufferSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
 renderFrame();
 });
 
-// ミニゲーム側からの強制終了メッセージの検知
+// ミニゲーム側からのメッセージ検知（強制終了、またはリザルトを閉じたとき）
 window.addEventListener('message', (event) => {
+// ミニゲーム側から「終了したよ」というメッセージ（MINIGAME_FINISHED）を受け取った時
 if (event.data === 'MINIGAME_FINISHED') {
+
+// 1. まだ動画の書き出し（保存）が終わっていない場合
+if (isMovieRendering) {
+// iframeのsrcをもう一度入り直させて、ミニゲーム（選択画面など最初から）をリロードします
+const gameIframe = document.getElementById('miniGameIframe');
+if (gameIframe) {
+gameIframe.src = 'mini-game.html';
+}
+alert("動画を一所懸命に保存中です。完了の通知が出るまで、もう一回遊べる丼！");
+
+} else {
+// 2. すでに動画の保存（ダウンロードリンクの生成）が終わっている場合
 hideOverlayAndCleanup();
 alert("ミニゲーム終了お疲れ様でした！\n録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
+}
 }
 });
 
