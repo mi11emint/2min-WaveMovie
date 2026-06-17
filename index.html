@@ -850,35 +850,51 @@ const validRange = 37;
 const steps = 120;
 
 if (currentWaveStyle === 'corona') {
-// 🌟【CORONA修正】曲線ではなく、密度の高い「放射状の細い線」で描写
-const baseRadius = 140;
-const barCount = 360; // 線の密度（360本に増やしてびっしり詰まった質感にします）
+    const baseRadius = 140;
+    const barCount = 360; 
 
-targetCtx.save();
-targetCtx.globalAlpha = currentOpacity; // 透過度を適用
-targetCtx.lineWidth = 2.5;              // 線がきれいに密集するよう、少し細めに調整
+    targetCtx.save();
+    targetCtx.globalAlpha = currentOpacity; 
+    targetCtx.lineWidth = 2.5;              
 
-for (let i = 0; i < barCount; i++) {
-const angle = (i / barCount) * Math.PI * 2;
-const mapRatio = i / barCount;
-// 3番目(60Hz)から46番目(1000Hz)の間を等間隔で割り振る
-const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
+    // 60Hz(3番目)から1000Hz(46番目)までのデータ個数（43個）
+    const startIdx = 3;
+    const endIdx = 46;
+    const dataRange = endIdx - startIdx;
 
-const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 6 + (boosted * 150);
+    for (let i = 0; i < barCount; i++) {
+        const angle = (i / barCount) * Math.PI * 2;
+        const mapRatio = i / barCount;
 
-// 内側の円周から、外側に向かって直線を引く
-const startX = centerX + Math.cos(angle) * baseRadius;
-const startY = centerY + Math.sin(angle) * baseRadius;
-const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+        // 🛠️ 改良：段々にならないよう、データの間を滑らかに補間する（線形補間）
+        const exactIdx = startIdx + mapRatio * dataRange; // 小数点を含む正確な位置
+        const idxLeft = Math.floor(exactIdx);            // 左側の部屋の番号
+        const idxRight = Math.min(idxLeft + 1, endIdx);   // 右側の部屋の番号
+        const fraction = exactIdx - idxLeft;             // 右側にどれくらい近いかの割合
 
-targetCtx.beginPath();
-targetCtx.moveTo(startX, startY);
-targetCtx.lineTo(endX, endY);
-targetCtx.stroke();
-}
-targetCtx.restore();
+        // 左の部屋の値と右の部屋の値を、割合（fraction）に応じて滑らかに混ぜ合わせる
+        const valueLeft = dataArr[idxLeft];
+        const valueRight = dataArr[idxRight];
+        const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
+
+        // 滑らかになった値を使って音圧ブーストを計算
+        const boosted = getBoostedValue(interpolatedValue);
+        const waveLength = 6 + (boosted * 150);
+
+        // 内側の円周から、外側に向かって直線を引く
+        const startX = centerX + Math.cos(angle) * baseRadius;
+        const startY = centerY + Math.sin(angle) * baseRadius;
+        const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+        const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(startX, startY);
+        targetCtx.lineTo(endX, endY);
+        targetCtx.stroke();
+    }
+    targetCtx.restore();
+
+} else if (currentWaveStyle === 'star') {
 
 } else if (currentWaveStyle === 'star') {
 const baseRadius = 138;
