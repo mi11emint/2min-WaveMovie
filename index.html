@@ -463,22 +463,21 @@ max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短
 </head>
 <body>
 <div class="info-text-area">
-<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br>2026.06.25</p><br>
-<p>声や音楽を視覚化して動画保存できます</p>
-<p>録音は２分まで</p>
-<p>お使いの端末にのみ、動画として保存されます</p>
-<p>動画は保存後に編集ＯＫ</p>
+<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
+<p>声や音楽を視覚化した動画を作れます</p>
+<p>お使いの端末にのみ保存されます</p>
+<p>保存後の動画は自由に編集ＯＫ</p>
 <p>使用許可不要 クレジット不要 アップロード先自由</p>
 <p></p>
-<p>告知なくサービスを変更・停止することがあります</p>
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
 
 <div class="header-zone">
 <div class="title">2min VOICE and MUSIC WAVE MOVIE</div>
-<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>
+<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>
 ページの更新(再読込)でフルリセットされます<br>
-録音中や保存中にブラウザを閉じると正常な動画が作れなくなります
+録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
+使い方やルールなどの詳細は　［ こちら ］
 </div>
 </div>
 
@@ -571,9 +570,10 @@ max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短
 </div>
 <div class="bottom-info-zone">
 <div class="bottom-notice-text">
-⋆☄録音中に色、波のパターン、イコライザ、音量を操作できますが、最終的に保存されるのは最後に選択した値になります。イコライザと音量は、録音後も調整できます<br>
-⋆☄保存された動画ファイルの読込や再生、編集の可否は、お使いの動画プレイヤーや編集アプリの仕様に準じます<br>
-⋆☄ド素人がGeminiさんにお願いしまくって生成、修正加工、調整したウェブサービスです。AIアレルギーの方はごめんなさい。製作者はユーザーに発生したバグや不具合、動画作成失敗、その他不利益があった場合の一切の責任を負いかねます。素材はイラストAC、効果音ラボからダウンロードして加工しています。すてきな音の波がお手元に残りますように✧ *･ﾟ.
+  製作者はユーザーに発生したバグや不具合、動画作成失敗、
+  <br>
+  その他不利益があった場合の一切の責任を負いかねます。
+<br>2026.06.25
 </div>
 </div>
 
@@ -1018,7 +1018,11 @@ const newSource = audioCtx.createMediaStreamSource(stream);
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
+// ncFilterの定義部分を差し替え
+ncFilter = audioCtx.createBiquadFilter(); 
+ncFilter.type = 'highpass'; 
+ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.75;
@@ -1043,7 +1047,11 @@ if (!audioCtx || !audioSource) return;
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
+// ncFilterの定義部分を差し替え
+ncFilter = audioCtx.createBiquadFilter(); 
+ncFilter.type = 'highpass'; 
+ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
 audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
@@ -1343,7 +1351,11 @@ bufferSource.buffer = audioBuffer;
 const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
 const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
 const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
+// 保存用処理内の rNcFilter 定義を修正
+const rNcFilter = renderAudioCtx.createBiquadFilter(); 
+rNcFilter.type = 'highpass'; 
+rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+rNcFilter.Q.value = 0.7;
 const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
 const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
