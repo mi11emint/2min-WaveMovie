@@ -1377,12 +1377,12 @@ playPauseBtn.addEventListener('click', () => {
         return; 
     }
 
-    // 🍏 Safari/Android共通：再生前にオーディオコンテキストを安全に再開
+    // 🍏 1. オーディオコンテキストの復帰を最速で実行
     if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
 
-    // 🍏 プレイヤーがまだない、または空の場合は、このタップの瞬間に「直接データ」をバインドして作成
+    // 🍏 2. プレイヤーの作成（ここも余計な処理をせずストレートに）
     if (!playbackAudio) {
         playbackAudio = new Audio(audioBlobUrl);
         
@@ -1397,20 +1397,24 @@ playPauseBtn.addEventListener('click', () => {
         });
     }
 
-    // 再生・一時停止の切り替え
+    // 3. 再生・一時停止の切り替え
     if (isPlayingRecorded) {
         playbackAudio.pause();
         if (playbackBgm) playbackBgm.pause();
         playPauseImg.src = IMG_PLAY;
         isPlayingRecorded = false;
     } else {
-        syncAudioParams(); // エフェクトや音量の同期
+        // ⚠️【重要】Safari対策：syncAudioParams() を再生の「前」に呼び出すのをやめます。
+        // タップした瞬間の熱量のまま、一直線に play() を呼び出します。
         
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
-        // 🍏 余計な関数やタイマーを一切挟まず、クリックイベントの直下でストレートに再生！
+        // 🍏 4. 何の関数も挟まず、タップ直下で即座に再生命令！
         playbackAudio.play().then(() => { 
+            // 🍏 5. 再生が「成功した直後」に、音量同期やBGMの連動処理を安全に滑り込ませる！
+            syncAudioParams(); 
+
             if (playbackBgm) { 
                 playbackBgm.currentTime = playbackAudio.currentTime; 
                 if (!bgmAnalyser && audioCtx) {
@@ -1432,8 +1436,8 @@ playPauseBtn.addEventListener('click', () => {
         }).catch(err => { 
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
-            console.error("Playback Error:", err);
-            alert("再生に失敗しました。もう一度だけ再生ボタンを押してみてください！");
+            console.error("Safari Blocked:", err);
+            alert("Safariの制限により再生に失敗しました。もう一度再生ボタンを押してみてください！");
         });
     }
 });
