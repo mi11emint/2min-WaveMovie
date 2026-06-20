@@ -1364,14 +1364,17 @@ pauseBtn.addEventListener('click', () => {
     }
 });
 
-('click', () => { stopRecording(); 
-  // 🍏 録音停止ボタンを押した「この瞬間」に、Safariの音声ロックを事前に解除しておく
-if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
-}
-// 空のダミー音声で一度再生の許可をブラウザから奪い取る
-const dummyAudio = new Audio();
-dummyAudio.play().catch(() => {});
+// ⏹️ 録音停止ボタンのクリックイベント（正しく修復）
+stopBtn.addEventListener('click', () => { 
+    stopRecording(); 
+    
+    // 🍏 録音停止ボタンを押した「この瞬間」に、Safariの音声ロックを事前に解除しておく
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    // 空のダミー音声で一度再生の許可をブラウザから奪い取る
+    const dummyAudio = new Audio();
+    dummyAudio.play().catch(() => {});
 });
 
 resetBtn.addEventListener('click', () => {
