@@ -1366,47 +1366,67 @@ resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
 });
 
-playPauseBtn.addEventListener('click', () => {
-if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
-if (playbackAudio.paused) {
-if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-syncAudioParams();
-playbackAudio.play().then(() => { 
-    isPlayingRecorded = true; 
-    playPauseImg.src = IMG_PAUSE; 
-    
-    if (playbackBgm) { 
-        if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
-            playbackBgm.currentTime = playbackAudio.currentTime; 
-        }
-        
-        if (!bgmAnalyser) {
-            bgmAnalyser = audioCtx.createAnalyser();
-            bgmAnalyser.fftSize = 1024;
-            bgmAnalyser.smoothingTimeConstant = 0.75;
-        }
-        if (!bgmDataArray) {
-            bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-        }
-        
-        if (bgmMediaSource && bgmGainNode) {
-            bgmMediaSource.disconnect();
-            bgmMediaSource.connect(bgmAnalyser);
-            bgmAnalyser.connect(bgmGainNode);
-            bgmGainNode.connect(audioCtx.destination);
-        }
+playPauseBtn.addEventListener('click', async () => {
+    if (!audioBlobUrl) { 
+        alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); 
+        return; 
+    }
 
-        playbackBgm.play(); 
-    } 
-    draw(); 
-}).catch(err => { alert("再生に失敗しました"); });
-} else { 
-    playbackAudio.pause(); 
-    if (playbackBgm) playbackBgm.pause(); 
-    playPauseImg.src = IMG_PLAY; 
-}
+    // 🍏 iPhone・Safariの音声ブロックを瞬時に解除する
+    if (audioCtx && audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+
+    // 録音データ（playbackAudio）がまだ生成されていない場合は、ここでセットアップを行う
+    if (!playbackAudio) {
+        setupAndPlayRecorded(); // これにより、内部でplaybackAudioが作られます
+    }
+
+    // セットアップ直後、または既に存在する場合の再生・一時停止処理
+    if (playbackAudio) {
+        if (playbackAudio.paused) {
+            syncAudioParams();
+            playbackAudio.play().then(() => { 
+                isPlayingRecorded = true; 
+                playPauseImg.src = IMG_PAUSE; 
+                
+                if (playbackBgm) { 
+                    if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
+                        playbackBgm.currentTime = playbackAudio.currentTime; 
+                    }
+                    
+                    if (!bgmAnalyser) {
+                        bgmAnalyser = audioCtx.createAnalyser();
+                        bgmAnalyser.fftSize = 1024;
+                        bgmAnalyser.smoothingTimeConstant = 0.75;
+                    }
+                    if (!bgmDataArray) {
+                        bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+                    }
+                    
+                    if (bgmMediaSource && bgmGainNode) {
+                        bgmMediaSource.disconnect();
+                        bgmMediaSource.connect(bgmAnalyser);
+                        bgmAnalyser.connect(bgmGainNode);
+                        bgmGainNode.connect(audioCtx.destination);
+                    }
+
+                    playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
+                } 
+                draw(); 
+            }).catch(err => { 
+                console.log("Play error:", err);
+                alert("再生に失敗しました。もう一度お試しください。"); 
+            });
+        } else { 
+            playbackAudio.pause(); 
+            if (playbackBgm) playbackBgm.pause(); 
+            playPauseImg.src = IMG_PLAY; 
+        }
+    }
 });
 
+// 🎛️ 再生シークバーの連動（ここも問題なく動きます！）
 seekBar.addEventListener('input', () => { 
     if (!playbackAudio) return; 
     isUserChangingIndex = true; 
