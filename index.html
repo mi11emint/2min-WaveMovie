@@ -1369,7 +1369,7 @@ playPauseBtn.addEventListener('click', () => {
         audioCtx.resume();
     }
 
-    // 🍏 2. プレイヤーの作成（ここも余計な処理をせずストレートに）
+    // 🍏 2. プレイヤーの作成
     if (!playbackAudio) {
         playbackAudio = new Audio(audioBlobUrl);
         
@@ -1391,22 +1391,28 @@ playPauseBtn.addEventListener('click', () => {
         playPauseImg.src = IMG_PLAY;
         isPlayingRecorded = false;
     } else {
-        // ⚠️【重要】Safari対策：syncAudioParams() を再生の「前」に呼び出すのをやめます。
-        // タップした瞬間の熱量のまま、一直線に play() を呼び出します。
-        
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
-        // 🍏 4. 何の関数も挟まず、タップ直下で即座に再生命令！
+        // 🍏 4. 何の関数も挟まず、タップ直下で即座に再生命令！(Safariのガードを最速突破)
         playbackAudio.play().then(() => { 
-            // 🍏 5. 再生が「成功した直後」に、音量同期やBGMの連動処理を安全に滑り込ませる！
-            syncAudioParams(); 
+            
+            // 🌊 5. 【重要】再生が成功した直後、最速で波形メーター（Analyser）に録音音声をバインドする！
+            if (audioCtx) {
+                if (!source) {
+                    source = audioCtx.createMediaElementSource(playbackAudio);
+                }
+                // フィルターや音量同期をここで走らせて波形メーターへ音を流します
+                syncAudioParams();
+            }
 
+            // BGMがインポートされている場合は連動再生
             if (playbackBgm) { 
                 playbackBgm.currentTime = playbackAudio.currentTime; 
                 if (!bgmAnalyser && audioCtx) {
                     bgmAnalyser = audioCtx.createAnalyser();
                     bgmAnalyser.fftSize = 1024;
+                    bgmAnalyser.smoothingTimeConstant = 0.75;
                 }
                 if (!bgmDataArray && bgmAnalyser) {
                     bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
@@ -1419,7 +1425,9 @@ playPauseBtn.addEventListener('click', () => {
                 }
                 playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
             } 
-            draw(); // 波形アニメーション開始
+            
+            // 🌊 6. 波形アニメーションを開始！
+            draw(); 
         }).catch(err => { 
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
@@ -1429,7 +1437,7 @@ playPauseBtn.addEventListener('click', () => {
     }
 });
 
-//  再生シークバーの連動
+// 🎛️ 再生シークバーの連動（ここもバッチリ動きます！）
 seekBar.addEventListener('input', () => { 
     if (!playbackAudio) return; 
     isUserChangingIndex = true; 
