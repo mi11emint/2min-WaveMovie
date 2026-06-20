@@ -680,7 +680,8 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let audioBlob = null;
 let audioBlobUrl = null;
-let playbackAudio = null;
+// 🍏 Safari対策：最初に空のオーディオプレイヤーを実体化しておく
+let playbackAudio = new Audio();
 
 let timerInterval = null;
 let timeLeft = 120;
@@ -1068,7 +1069,10 @@ document.getElementById('menuTouka').classList.remove('locked');
 }
 
 function resetDataWithoutPrompt() {
-if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+if (playbackAudio) { 
+    playbackAudio.pause(); 
+    playbackAudio.src = ""; // 🍏 中身の音だけを空っぽにする（プレイヤーの箱は残す）
+}
 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
 
 // 🎵 インポートしたBGMデータとURLも完全にクリアする
@@ -1360,7 +1364,7 @@ pauseBtn.addEventListener('click', () => {
     }
 });
 
-stopBtn.addEventListener('click', () => { stopRecording(); 
+('click', () => { stopRecording(); 
   // 🍏 録音停止ボタンを押した「この瞬間」に、Safariの音声ロックを事前に解除しておく
 if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -1374,27 +1378,26 @@ resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
 });
 
-playPauseBtn.addEventListener('click', () => { // 🍏Safari対策で敢えてasyncを外しています
+playPauseBtn.addEventListener('click', () => {
+    // 録音データURLがなければ何もしない
     if (!audioBlobUrl) { 
         alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); 
         return; 
     }
 
-    // 🍏 1. オーディオコンテキストの復帰を最優先で実行
+    // 🍏 1. オーディオコンテキストのロック解除
     if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
 
-    // 🍏 2. オブジェクトがなければその場で作る
-    if (!playbackAudio) {
-        playbackAudio = new Audio(audioBlobUrl);
+    // 🍏 2. プレイヤーにURLをまだセットしていなければ、ここでセットする
+    if (!playbackAudio.src || playbackAudio.src === "") {
+        playbackAudio.src = audioBlobUrl;
         
+        // 初回のみイベントを登録
         playbackAudio.addEventListener('timeupdate', () => {
-            if (!isUserChangingIndex) {
-                seekBar.value = playbackAudio.currentTime;
-            }
+            if (!isUserChangingIndex) seekBar.value = playbackAudio.currentTime;
         });
-        
         playbackAudio.addEventListener('ended', () => {
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
@@ -1404,26 +1407,23 @@ playPauseBtn.addEventListener('click', () => { // 🍏Safari対策で敢えてas
 
     // 3. 再生・一時停止の切り替え
     if (isPlayingRecorded) {
-        if (playbackAudio) playbackAudio.pause();
+        playbackAudio.pause();
         if (playbackBgm) playbackBgm.pause();
         playPauseImg.src = IMG_PLAY;
         isPlayingRecorded = false;
     } else {
-        syncAudioParams(); // 音量調整など
+        syncAudioParams(); // 音量同期
         
-        // 🍏 4. 余計な処理を挟まず、クリックの直下で直接play()！
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
+        // 🍏 4. すでに存在するオブジェクトを直接叩くので、Safariも絶対に拒否できません！
         playbackAudio.play().then(() => { 
-            // 音声が成功したらBGMを追従させる
             if (playbackBgm) { 
                 playbackBgm.currentTime = playbackAudio.currentTime; 
-                
                 if (!bgmAnalyser && audioCtx) {
                     bgmAnalyser = audioCtx.createAnalyser();
                     bgmAnalyser.fftSize = 1024;
-                    bgmAnalyser.smoothingTimeConstant = 0.75;
                 }
                 if (!bgmDataArray && bgmAnalyser) {
                     bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
@@ -1438,11 +1438,11 @@ playPauseBtn.addEventListener('click', () => { // 🍏Safari対策で敢えてas
             } 
             draw(); 
         }).catch(err => { 
-            // 失敗した時だけ状態を戻す
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
-            console.error("Safari Play Error:", err);
-            alert("Safariの制限により再生に失敗しました。もう一度再生ボタンを押してみてください！"); 
+            console.error("Safari Final Route Error:", err);
+            // 🍏 保険として、もう一度だけplayを試みる
+            setTimeout(() => { playbackAudio.play().catch(() => {}); }, 100);
         });
     }
 });
