@@ -1277,7 +1277,20 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
-            audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+    // 🍏 audioMimeType（直前でmp4等に自動判別した形式）を使って、正しくデータをまとめる
+    const finalAudioType = audioMimeType || 'audio/mp4';
+    audioBlob = new Blob(recordedChunks, { type: finalAudioType });
+    audioBlobUrl = URL.createObjectURL(audioBlob);
+    
+    // 🍏 Safari対策：録音データが確定した瞬間に、次の再生プレイヤーを完全に初期化して紐付けておく
+    if (playbackAudio) {
+        playbackAudio.pause();
+        playbackAudio = null;
+    }
+    
+    seekBar.value = 0;
+    downloadBtn.classList.add('ready');
+};
             audioBlobUrl = URL.createObjectURL(audioBlob);
             playbackAudio = new Audio(audioBlobUrl);
             playbackAudio.preload = "auto";
