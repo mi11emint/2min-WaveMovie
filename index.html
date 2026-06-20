@@ -1260,7 +1260,19 @@ recBtn.addEventListener('click', async () => {
         isRecordingPaused = false;
         recordedChunks = [];
         
-        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
+        // 利用可能な形式を自動で探す
+let audioMimeType = 'audio/webm;codecs=opus';
+if (!MediaRecorder.isTypeSupported(audioMimeType)) {
+    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        audioMimeType = 'audio/mp4'; // iPhone(Safari)用の形式
+    } else {
+        audioMimeType = ''; // 端末のデフォルトに任せる
+    }
+}
+
+const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
+mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
+
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
@@ -1486,15 +1498,33 @@ if (bgmBlob) {
 }
 
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
-const movieRecorder = new MediaRecorder(combinedStream, options);
+// 動画の形式もiPhone対応に自動判別
+let videoMimeType = 'video/webm;codecs=vp9,opus';
+let extension = 'webm';
+
+if (!MediaRecorder.isTypeSupported(videoMimeType)) {
+    if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a')) {
+        videoMimeType = 'video/mp4;codecs=avc1,mp4a'; // iPhone用
+        extension = 'mp4';
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+        videoMimeType = 'video/mp4';
+        extension = 'mp4';
+    } else {
+        videoMimeType = ''; // デフォルト
+        extension = 'mp4';
+    }
+}
+
+const movieOptions = videoMimeType ? { mimeType: videoMimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 } : { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+const movieRecorder = new MediaRecorder(combinedStream, movieOptions);
 const movieChunks = [];
 
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
 movieRecorder.onstop = () => {
-const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
+const blobType = videoMimeType || 'video/mp4';
+const finalBlob = new Blob(movieChunks, { type: blobType });
 const finalVideoUrl = URL.createObjectURL(finalBlob);
-const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
+const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.${extension}`;
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
