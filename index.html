@@ -1263,59 +1263,33 @@ recBtn.addEventListener('click', async () => {
         isRecordingPaused = false;
         recordedChunks = [];
         
-// パソコン・Android・iPhoneすべてで audio/mp4 を最優先にする
-let audioMimeType = '';
-if (MediaRecorder.isTypeSupported('audio/mp4')) {
-    audioMimeType = 'audio/mp4';
-} else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-    audioMimeType = 'audio/webm;codecs=opus'; // 万が一mp4非対応のブラウザ用
-}
+        // パソコン・Android・iPhoneすべてで audio/mp4 を最優先にする
+        let audioMimeType = '';
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            audioMimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            audioMimeType = 'audio/webm;codecs=opus'; // 万が一mp4非対応のブラウザ用
+        }
 
-const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
-mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
+        const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
+        mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
 
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
-    // 🍏 audioMimeType（直前でmp4等に自動判別した形式）を使って、正しくデータをまとめる
-    const finalAudioType = audioMimeType || 'audio/mp4';
-    audioBlob = new Blob(recordedChunks, { type: finalAudioType });
-    audioBlobUrl = URL.createObjectURL(audioBlob);
-    
-    // 🍏 Safari対策：録音データが確定した瞬間に、次の再生プレイヤーを完全に初期化して紐付けておく
-    if (playbackAudio) {
-        playbackAudio.pause();
-        playbackAudio = null;
-    }
-    
-    seekBar.value = 0;
-    downloadBtn.classList.add('ready');
-};
+            // 🍏 audioMimeType（直前でmp4等に自動判別した形式）を使って、正しくデータをまとめる
+            const finalAudioType = audioMimeType || 'audio/mp4';
+            audioBlob = new Blob(recordedChunks, { type: finalAudioType });
             audioBlobUrl = URL.createObjectURL(audioBlob);
-            playbackAudio = new Audio(audioBlobUrl);
-            playbackAudio.preload = "auto";
             
-            const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
-            setupAudioNodes(playbackSource, false);
-            
-            if (playbackBgm) {
-                syncAudioParams();
+            // 🍏 Safari対策：録音データが確定した瞬間に、次の再生プレイヤーを完全に初期化して紐付けておく
+            if (playbackAudio) {
+                playbackAudio.pause();
+                playbackAudio = null;
             }
-
-            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
-            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
-            playbackAudio.addEventListener('ended', () => { 
-                playPauseImg.src = IMG_PLAY; 
-                isPlayingRecorded = false; 
-                if (animationId) cancelAnimationFrame(animationId); 
-                playbackAudio.currentTime = 0; 
-                if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
-                seekBar.value = 0; 
-                drawStaticWave(); 
-            });
-            downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
-            syncAudioParams();
-            lockMenus();
+            
+            seekBar.value = 0;
+            downloadBtn.classList.add('ready');
         };
 
         if (playbackBgm) {
@@ -1609,7 +1583,7 @@ initMonthlyColors();
 initStandardColors();
 setupPaletteEvents();
 unlockMenus();
-drawStaticWave();nois
+drawStaticWave();
 
 </script>
 </body>
