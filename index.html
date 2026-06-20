@@ -1388,24 +1388,32 @@ playPauseBtn.addEventListener('click', () => {
         return; 
     }
 
-    // 🍏 1. オーディオコンテキストのロック解除
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+    // 🍏 1. オーディオコンテキストのロック解除（iOS Safariで一番確実な方法に強化）
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        // 直接ブラウザのスピーカー（出力先）を一度アクティブにする
+        const oscillator = audioCtx.createOscillator();
+        oscillator.connect(audioCtx.destination);
+        oscillator.start(0);
+        oscillator.stop(0.001); 
     }
 
-    // 🍏 2. プレイヤーにURLをまだセットしていなければ、ここでセットする
-    if (!playbackAudio.src || playbackAudio.src === "") {
+    // 🍏 2. プレイヤーにURLをセット（毎回確実に最新の録音をロードし直す仕様に）
+    if (playbackAudio.src !== audioBlobUrl) {
         playbackAudio.src = audioBlobUrl;
+        playbackAudio.load(); // 🍏 Safariに「今からこの音を鳴らすよ！」と強制準備させる
         
-        // 初回のみイベントを登録
-        playbackAudio.addEventListener('timeupdate', () => {
+        // イベントが重複しないよう、初回のみまたはリセット後に紐付け
+        playbackAudio.ontimeupdate = () => {
             if (!isUserChangingIndex) seekBar.value = playbackAudio.currentTime;
-        });
-        playbackAudio.addEventListener('ended', () => {
+        };
+        playbackAudio.onended = () => {
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
             if (playbackBgm) playbackBgm.pause();
-        });
+        };
     }
 
     // 3. 再生・一時停止の切り替え
@@ -1420,33 +1428,35 @@ playPauseBtn.addEventListener('click', () => {
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
-        // 🍏 4. すでに存在するオブジェクトを直接叩くので、Safariも絶対に拒否できません！
-        playbackAudio.play().then(() => { 
-            if (playbackBgm) { 
-                playbackBgm.currentTime = playbackAudio.currentTime; 
-                if (!bgmAnalyser && audioCtx) {
-                    bgmAnalyser = audioCtx.createAnalyser();
-                    bgmAnalyser.fftSize = 1024;
-                }
-                if (!bgmDataArray && bgmAnalyser) {
-                    bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-                }
-                if (bgmMediaSource && bgmGainNode && audioCtx) {
-                    bgmMediaSource.disconnect();
-                    bgmMediaSource.connect(bgmAnalyser);
-                    bgmAnalyser.connect(bgmGainNode);
-                    bgmGainNode.connect(audioCtx.destination);
-                }
-                playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
-            } 
-            draw(); 
-        }).catch(err => { 
-            isPlayingRecorded = false;
-            playPauseImg.src = IMG_PLAY;
-            console.error("Safari Final Route Error:", err);
-            // 🍏 保険として、もう一度だけplayを試みる
-            setTimeout(() => { playbackAudio.play().catch(() => {}); }, 100);
-        });
+        // 🍏 4. Safariが音を読み込む一瞬の隙を作るため、ほんの少し（0.05秒）だけ待ってから再生
+        setTimeout(() => {
+            playbackAudio.play().then(() => { 
+                if (playbackBgm) { 
+                    playbackBgm.currentTime = playbackAudio.currentTime; 
+                    if (!bgmAnalyser && audioCtx) {
+                        bgmAnalyser = audioCtx.createAnalyser();
+                        bgmAnalyser.fftSize = 1024;
+                    }
+                    if (!bgmDataArray && bgmAnalyser) {
+                        bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+                    }
+                    if (bgmMediaSource && bgmGainNode && audioCtx) {
+                        bgmMediaSource.disconnect();
+                        bgmMediaSource.connect(bgmAnalyser);
+                        bgmAnalyser.connect(bgmGainNode);
+                        bgmGainNode.connect(audioCtx.destination);
+                    }
+                    playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
+                } 
+                draw(); // 波形の描画スタート
+            }).catch(err => { 
+                isPlayingRecorded = false;
+                playPauseImg.src = IMG_PLAY;
+                console.error("Safari Final Route Error:", err);
+                // 最後の保険：もう一回ポチッと押してもらうためのアラートは出さず、裏でもう一度だけ再生を試みる
+                playbackAudio.play().catch(() => {});
+            });
+        }, 50); // 🍏 50ミリ秒だけ待つことでSafariのロードが間に合います！
     }
 });
 
