@@ -528,6 +528,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
+<div id="styleChladni" class="style-option" data-style="chladni">CHLADNI</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -776,6 +777,20 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+} else if (currentWaveStyle === 'chladni') {
+    const spacing = 20; // 砂の間隔（ピクセル）。小さくするとより細かく、大きくすると粗くなります
+    const dotSize = 2.5; // 砂の粒の大きさ
+    
+    // 画面全体を格子状に走査して点を打つ
+    for (let x = spacing; x < canvas.width; x += spacing) {
+        for (let y = spacing; y < canvas.height; y += spacing) {
+            ctx.fillRect(x, y, dotSize, dotSize);
+// ランダム感を出す場合の rect の書き方（ループの中身）
+const offsetX = (Math.random() - 0.5) * 6; // 左右に最大3pxズラす
+const offsetY = (Math.random() - 0.5) * 6; // 上下に最大3pxズラす
+ctx.fillRect(x + offsetX, y + offsetY, dotSize, dotSize);
+        }
+    }
 }
 }
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
@@ -881,8 +896,58 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 targetCtx.restore();
+
+} else if (currentWaveStyle === 'chladni') {
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.lineWidth = 2;
+
+    // 音声データ（低音〜高音）の平均的な強さを計算
+    let totalVolume = 0;
+    const sampleCount = Math.min(dataArr.length, 64);
+    for (let i = 0; i < sampleCount; i++) {
+        totalVolume += dataArr[i] || 0;
+    }
+    const avgVol = totalVolume / sampleCount;
+    const boost = getBoostedValue(avgVol); // 音のノリ具合（0.0 〜 1.0）
+
+    // クラドニ図形を構成する「格子点の細かさ」を音の高さ（主要な周波数）で揺らす
+    let maxVal = 0, maxIdx = 1;
+    for(let i=1; i<sampleCount; i++) {
+        if(dataArr[i] > maxVal) { maxVal = dataArr[i]; maxIdx = i; }
+    }
+    
+    // パラメータ（N, M）を音の強弱とピッチで変化させる
+    const n = 2 + (maxIdx % 4) + boost * 2;
+    const m = 3 + (maxIdx % 3) + boost * 3;
+    const step = 8; // グリッドの間隔（数字を小さくすると高密度になりますが重くなります）
+
+    targetCtx.beginPath();
+    for (let x = 40; x < targetCanvas.width - 40; x += step) {
+        for (let y = 40; y < targetCanvas.height - 40; y += step) {
+            // 中心からの正規化座標 (-1.0 〜 1.0)
+            const nx = (x - centerX) / (targetCanvas.width / 2);
+            const ny = (y - centerY) / (targetCanvas.height / 2);
+
+            // クラドニのシミュレーション数式（定常波の干渉）
+            // cos(nπx)cos(mπy) - cos(mπx)cos(nπy)
+            const chladniVal = Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * ny) - 
+                               Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * ny);
+
+            // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
+            if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
+                // 音の強さに合わせてドットの大きさを変える
+                const dotSize = (1 + boost * 3) * 2;
+                targetCtx.rect(x, y, dotSize, dotSize);
+            }
+        }
+    }
+    targetCtx.fillStyle = gradient;
+    targetCtx.fill();
+    targetCtx.restore();
+    }
 }
-}
+
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
@@ -1293,6 +1358,7 @@ seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 // 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
+stopBufferPlayback();
 if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
@@ -1442,11 +1508,10 @@ drawStaticWave();
 <div id="videoPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; padding: 20px;">
     <div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
         <p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;"> 動画が完成しました！</p>
-        <p style="color: #111b35; font-size: 13px; margin-bottom: 15px; background: #fff; padding: 5px; border-radius: 5px; font-family: sans-serif;">
-        Android/PCは自動保存されます^.ˬ.^ฅⳊ<br>
-        iPhoneで保存した動画が端末で開けないことがあります<br>
-        下のiPhone SAVE Btnで<br>
-        開いた動画を画録してください</p>
+        <p style="color: #fff; font-size: 12px; margin-bottom: 15px; background: #111b35; padding: 5px; border-radius: 5px; font-family: sans-serif;">
+        Android/PCは自動保存されます^.ˬ.^ฅⳊ<br><br>
+        iPhoneの方は下のiPhone SAVE Btnで<br>
+        開いた動画の【画録】がオススメ！</p>
         <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
         
         <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE　Btn</button>
