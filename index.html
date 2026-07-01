@@ -411,9 +411,7 @@ transition: transform 0.2s;
 border-color: #ffffff;
 transform: scale(1.1);
 }
-.monthly-section {
-margin-top: 15px;
-}
+
 .hidden-file-input {
 position: absolute;
 width: 0;
@@ -432,6 +430,8 @@ margin-top: 5px;
 max-width: 50px;
 }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
 </head>
 <body>
 <div class="info-text-area">
@@ -534,10 +534,27 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div class="setting-title">WAVE COLOR</div>
 <div class="palette-grid" id="standardGrid"></div>
 </div>
-<div class="setting-section monthly-section" id="menuMonthlyColor">
-<div class="setting-title" id="monthlyTitle">JUNE COLOR</div>
-<div class="palette-grid" id="monthlyGrid"></div>
+
+<div class="setting-section" id="menuCustomPalette" style="margin-top: 15px;">
+    <div class="setting-title">YOUR PALETTE</div>
+
+    <div style="display: flex; align-items: center; gap: 2px; font-size: 1.0rem; color: rgba(255,255,255,0.7); user-select: none; margin-bottom: 12px;">
+        <!-- 左：完成形のグラデーション丸 -->
+        <div id="customPreviewCircle" class="palette-circle" style="background: linear-gradient(135deg, #fff0f5, #faf0e6); margin: 0; cursor: pointer;"></div>
+        <span>=</span>
+        <!-- 右1：1色目の丸（選択中なら枠線がつく） -->
+        <div id="customPickLabel1" class="palette-circle selected" style="background: #fff0f5; margin: 0; cursor: pointer;"></div>
+        <span>×</span>
+        <!-- 右2：2色目の丸 -->
+        <div id="customPickLabel2" class="palette-circle" style="background: #faf0e6; margin: 0; cursor: pointer;"></div>
+    </div>
+
+    <!--  ここにGoogle風のカラーピッカーが自動生成されます -->
+    <div id="picker" style="display: flex; justify-content: center; margin-top: 8px;">
+      
+    </div>
 </div>
+
 <div class="touka-slider-zone" id="menuTouka">
 <div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>png</div>
 <input type="range" id="toukaSlider" class="audio-slider" min="0" max="100" value="0">
@@ -563,22 +580,24 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 // ========================================
 // 1. 定数・設定データの定義
 // ========================================
-const MONTHLY_SETTING = {
-title: "JUNE COLOR",
-patterns: [
-["#f3f3f3", "#e7e7eb", "#dcdddd"],
-["#D0E03D", "#83B2E7", "#C4DDE7"],
-["#EE97E8", "#BECBF3", "#8158E0"],
-["#D2140B", "#F8481F", "#ECD3B5"]
-]
-};
+
 const STANDARD_PALETTES = [
-["#fff0f5", "#faf0e6"], ["#dfe9f3", "#ffffff"], ["#fff1eb", "#ace0f9"], ["#fddb92", "#d1fdff"],
-["#bc8f8f", "#ffe4e1"],["#eebbcb", "#cee4ae"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
-["#FFF6B7", "#F6416C"],["#a6c0fe", "#f68084"],["#4682b4", "#f0f8ff"],["#ffee00", "#ffaa00"],
-["#800080", "#f08080"], ["#f107a3", "#7b2ff7"], ["#00ffff", "#00008b"], ["#16a085", "#f4d03f"],
-["#dc143c", "#8b0000"], ["#4b0082", "#6495ed"], ["#243949", "#517fa4"], ["#8b5a2b", "#2e8b57"],
-["#dbd0e6", "#250d00"], ["#191970", "#fffacd"], ["#a8caba", "#5d4157"], ["#eeeeee", "#111111"]
+["#fff0f5", "#faf0e6"],//花朝露
+["#fddb92", "#d1fdff"],//菜花
+["#fff1eb", "#ace0f9"],//早朝
+["#FFF6B7", "#F6416C"],//薔薇
+
+["#bc8f8f", "#ffe4e1"],//テディベア
+["#2a6e6b", "#ffd700"],//若葉
+["#f0fff0", "#40e0d0"],//ラグーン
+["#800080", "#f08080"],//口紅
+
+["#a8caba", "#5d4157"],//鳩
+["#191970", "#fffacd"],//夜明け
+["#00ffff", "#00008b"],//海中
+["#f107a3", "#7b2ff7"],//ネオン
+
+
 ];
 const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
 const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
@@ -603,7 +622,6 @@ const styleOptions = document.querySelectorAll('.style-option');
 const menuBg = document.getElementById('menuBg');
 const menuStyle = document.getElementById('menuStyle');
 const menuColor = document.getElementById('menuColor');
-const menuMonthlyColor = document.getElementById('menuMonthlyColor');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const playPauseImg = document.getElementById('playPauseImg');
 const seekBar = document.getElementById('seekBar');
@@ -664,18 +682,6 @@ let monitorBgmSource = null; // 録音中のモニター演奏用
 // ========================================
 // 4. 関数の定義
 // ========================================
-function initMonthlyColors() {
-document.getElementById('monthlyTitle').innerText = MONTHLY_SETTING.title;
-const grid = document.getElementById('monthlyGrid');
-grid.innerHTML = '';
-MONTHLY_SETTING.patterns.forEach((colors) => {
-const circle = document.createElement('div');
-circle.className = 'palette-circle';
-circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
-circle.dataset.colors = JSON.stringify(colors);
-grid.appendChild(circle);
-});
-}
 function initStandardColors() {
 const grid = document.getElementById('standardGrid');
 grid.innerHTML = '';
@@ -1010,11 +1016,11 @@ const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
 timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 function lockMenus() {
-menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
+menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuCustomPalette.classList.add('locked');
 document.getElementById('menuTouka').classList.add('locked');
 }
 function unlockMenus() {
-menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
+menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuCustomPalette.classList.remove('locked');
 document.getElementById('menuTouka').classList.remove('locked');
 }
 function stopBufferPlayback() {
@@ -1499,9 +1505,81 @@ alert("動画を一所懸命に書き出し中です。もう一回遊べる丼�
 // ========================================
 // 7. 初期化処理の実行
 // ========================================
-initMonthlyColors();
 initStandardColors();
 setupPaletteEvents();
+
+// 新カスタムパレットの処理
+// 💡 ここから新しいiro.js用の処理に丸ごと差し替え
+const customPickLabel1 = document.getElementById('customPickLabel1');
+const customPickLabel2 = document.getElementById('customPickLabel2');
+const customPreviewCircle = document.getElementById('customPreviewCircle');
+
+// 現在どちらの丸（1色目か2色目か）を選択しているかを記録する変数（最初は1色目）
+let activeColorIndex = 1; 
+let color1 = "#fff0f5";
+let color2 = "#faf0e6";
+
+// 1. iro.js カラーピッカーの初期化（Google風のデザインに設定）
+const colorPicker = new iro.ColorPicker("#picker", {
+    width: 100, // パネル全体の幅（サイドパネルに収まるサイズ）
+    color: color1, // 初期色
+    display: "block",
+    layout: [
+        { component: iro.ui.Box },   // Google風のグラデーション四角形
+        { component: iro.ui.Slider, options: { sliderType: 'hue' } } // 色相（虹色）スライダー
+    ]
+});
+
+// 2. 画面の色と波形を更新する共通関数
+function updateCustomPalette() {
+    // 右側の単色丸の色を更新
+    customPickLabel1.style.background = color1;
+    customPickLabel2.style.background = color2;
+    
+    // 左側のプレビュー丸にグラデーションを適用
+    customPreviewCircle.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+    
+    // 他の標準パレット等の選択枠（selected）を一度すべて外す
+    document.querySelectorAll('.palette-circle').forEach(p => p.classList.remove('selected'));
+    
+    // 完成形の丸を選択状態（枠線あり）にする
+    customPreviewCircle.classList.add('selected');
+    
+    // 波形に色を反映して再描画
+    currentWaveColors = [color1, color2];
+    triggerUIRefresh();
+}
+
+// 3. ピッカーをいじった（色を変えた）瞬間のイベント
+colorPicker.on('color:change', function(color) {
+    if (activeColorIndex === 1) {
+        color1 = color.hexString; // 1色目を更新
+    } else {
+        color2 = color.hexString; // 2色目を更新
+    }
+    updateCustomPalette();
+});
+
+// 4. 「右の○」をクリックした時、ピッカーの編集対象を切り替える処理
+customPickLabel1.addEventListener('click', () => {
+    activeColorIndex = 1;
+    customPickLabel1.classList.add('selected');
+    customPickLabel2.classList.remove('selected');
+    colorPicker.setColor(color1); // ピッカーのつまみを現在の1色目の位置に合わせる
+});
+
+customPickLabel2.addEventListener('click', () => {
+    activeColorIndex = 2;
+    customPickLabel2.classList.add('selected');
+    customPickLabel1.classList.remove('selected');
+    colorPicker.setColor(color2); // ピッカーのつまみを現在の2色目の位置に合わせる
+});
+
+// 5. 左の完成形の○がクリックされたときも再適応
+customPreviewCircle.addEventListener('click', () => {
+    updateCustomPalette();
+});
+// 💡 ここまで
 unlockMenus();
 drawStaticWave();
 </script>
