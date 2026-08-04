@@ -700,10 +700,10 @@
                             let elapsedSinceTrigger = 25 - (timeLeft - 5);
                             if (elapsedSinceTrigger < 0) elapsedSinceTrigger = 0;
                             let progressRatio = elapsedSinceTrigger / 25; 
-                            treeBGM.volume = Math.min(1.0, 0.01 + progressRatio * 0.99);
+                            treeBGM.volume = Math.min(0.5, 0.01 + progressRatio * 0.49);
                         } else {
                             // ゲーム終了5秒前〜終了までは元の最大音量（1.0）を維持
-                            treeBGM.volume = 1.0;
+                            treeBGM.volume = 0.5;
                         }
                     }
 
