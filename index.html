@@ -1294,19 +1294,27 @@ dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 async function restartRecordingStream() {
 if (!isRecording || !mediaRecorder) return;
-if (stream) stream.getTracks().forEach(track => track.stop());
+// 🔹追加: 完全なストリームクリーンアップ
+if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+}
+if (source) {
+    try { source.disconnect(); } catch(e) {}
+    source = null;
+}
 try {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
 });
-const newSource = audioCtx.createMediaStreamSource(stream);
+source = audioCtx.createMediaStreamSource(stream); // 🔹修正: 新しいストリームにsourceを再割り当て
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+source.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser); gainNode.connect(recordDestination);
 syncAudioParams();
 } catch (err) { console.error(err); }
@@ -1316,9 +1324,20 @@ if (!isRecording) return;
 isRecording = false;
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE;
-if (monitorBgmSource) { try { monitorBgmSource.stop(); } catch(e){} monitorBgmSource = null; }
-if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-if (stream) stream.getTracks().forEach(track => track.stop());
+if (monitorBgmSource) { try { monitorBgmSource.stop(); monitorBgmSource.disconnect(); } catch(e){} monitorBgmSource = null; }
+if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    try { mediaRecorder.stop(); } catch(e) {}
+}
+// 🔹追加: 完全にマイクの接続を解除する
+if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+}
+if (source) {
+    try { source.disconnect(); } catch(e) {}
+    source = null;
+}
+
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 clearInterval(timerInterval);
 recBtn.classList.remove('recording');
@@ -1416,6 +1435,22 @@ draw();
 }
 function resetDataWithoutPrompt(keepBgm = false) {
 stopBufferPlayback();
+
+// 🔹追加: リセットや終了時に、背後でマイクが掴みっぱなしになるのを完全に防ぐ
+if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+}
+if (source) {
+    try { source.disconnect(); } catch(e) {}
+    source = null;
+}
+if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    try { mediaRecorder.stop(); } catch(e) {}
+}
+mediaRecorder = null;
+// ----------------------------------------------------
+
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false;
@@ -1424,7 +1459,7 @@ pauseBtnImg.src = IMG_PAUSE;
 playbackAudioBuffer = null;
 playbackOffset = 0;
 window.kamonState = null; // 状態のリセット
-eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
+eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; analyser = null; dataArray = null;
 if (!keepBgm) {
 playbackBgmBuffer = null;
 bgmBlob = null; bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
