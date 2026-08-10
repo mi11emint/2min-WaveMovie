@@ -713,9 +713,21 @@ let bgmAnalyser = null;
 let bgmDataArray = null;
 let bgmGainNode = null;
 let monitorBgmSource = null; // 録音中のモニター演奏用
+
 // ========================================
 // 4. 関数の定義
 // ========================================
+
+// AudioContext生成用ヘルパー（サンプルレート44100Hz指定）
+function createAudioContext() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    try {
+        return new AudioCtx({ sampleRate: 44100 });
+    } catch (e) {
+        return new AudioCtx();
+    }
+}
+
 function initStandardColors() {
 const grid = document.getElementById('standardGrid');
 grid.innerHTML = '';
@@ -1285,7 +1297,7 @@ async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
 });
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (!audioCtx) audioCtx = createAudioContext();
 source = audioCtx.createMediaStreamSource(stream);
 setupAudioNodes(source, true);
 recordDestination = audioCtx.createMediaStreamDestination();
@@ -1599,7 +1611,7 @@ bgmInput.addEventListener('change', async (e) => {
 const file = e.target.files[0];
 if (file) {
 bgmBlob = file;
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (!audioCtx) audioCtx = createAudioContext();
 try {
 const bgmArrayBuffer = await bgmBlob.arrayBuffer();
 playbackBgmBuffer = await audioCtx.decodeAudioData(bgmArrayBuffer);
@@ -1616,7 +1628,7 @@ alert("BGMの読み込みに失敗しました꙳☄︎ファイル形式をご�
 // 6. 録音コントロール系の処理
 // ========================================
 recBtn.addEventListener('click', async () => {
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (!audioCtx) audioCtx = createAudioContext();
 if (audioCtx.state === 'suspended') await audioCtx.resume();
 if (isRecording) {
 if (isRecordingPaused) {
@@ -1705,7 +1717,7 @@ alert("録音をリセットしました^.ˬ.^ฅ");
 // 確認再生ボタンの処理
 playPauseBtn.addEventListener('click', async () => {
 if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (!audioCtx) audioCtx = createAudioContext();
 if (audioCtx.state === 'suspended') await audioCtx.resume();
 if (isPlayingRecorded) {
 stopBufferPlayback();
@@ -1730,7 +1742,7 @@ downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
 stopBufferPlayback();
 if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
-const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const renderAudioCtx = createAudioContext();
 if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
 document.getElementById('renderOverlay').style.display = 'flex';
 document.getElementById('miniGameIframe').src = 'mini-game.html';
