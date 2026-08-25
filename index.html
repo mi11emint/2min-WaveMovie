@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice Wave Movie Maker</title>
+<title>にふなみ</title>
 <style>
 @font-face {
 font-family: 'Cinecaption';
@@ -436,7 +436,7 @@ max-width: 50px;
 </head>
 <body>
 <div class="info-text-area">
-<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
+<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">作者：鳳月 眠人</a><br></p><br>
 <p>声や音楽を視覚化した動画を作って保存できます</p>
 <p>歌みたや音声投稿をもっと気軽に自由に！</p>
 <p>使い方、ルール、仕様の詳細は <a href="https://note.com/mi11emint/n/n007660eab696" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
@@ -713,21 +713,9 @@ let bgmAnalyser = null;
 let bgmDataArray = null;
 let bgmGainNode = null;
 let monitorBgmSource = null; // 録音中のモニター演奏用
-
 // ========================================
 // 4. 関数の定義
 // ========================================
-
-// AudioContext生成用ヘルパー（サンプルレート44100Hz指定）
-function createAudioContext() {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    try {
-        return new AudioCtx({ sampleRate: 44100 });
-    } catch (e) {
-        return new AudioCtx();
-    }
-}
-
 function initStandardColors() {
 const grid = document.getElementById('standardGrid');
 grid.innerHTML = '';
@@ -1297,7 +1285,7 @@ async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
 });
-if (!audioCtx) audioCtx = createAudioContext();
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 source = audioCtx.createMediaStreamSource(stream);
 setupAudioNodes(source, true);
 recordDestination = audioCtx.createMediaStreamDestination();
@@ -1306,27 +1294,19 @@ dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 async function restartRecordingStream() {
 if (!isRecording || !mediaRecorder) return;
-// 🔹追加: 完全なストリームクリーンアップ
-if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-}
-if (source) {
-    try { source.disconnect(); } catch(e) {}
-    source = null;
-}
+if (stream) stream.getTracks().forEach(track => track.stop());
 try {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
 });
-source = audioCtx.createMediaStreamSource(stream); // 🔹修正: 新しいストリームにsourceを再割り当て
+const newSource = audioCtx.createMediaStreamSource(stream);
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-source.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser); gainNode.connect(recordDestination);
 syncAudioParams();
 } catch (err) { console.error(err); }
@@ -1336,20 +1316,9 @@ if (!isRecording) return;
 isRecording = false;
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE;
-if (monitorBgmSource) { try { monitorBgmSource.stop(); monitorBgmSource.disconnect(); } catch(e){} monitorBgmSource = null; }
-if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    try { mediaRecorder.stop(); } catch(e) {}
-}
-// 🔹追加: 完全にマイクの接続を解除する
-if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-}
-if (source) {
-    try { source.disconnect(); } catch(e) {}
-    source = null;
-}
-
+if (monitorBgmSource) { try { monitorBgmSource.stop(); } catch(e){} monitorBgmSource = null; }
+if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+if (stream) stream.getTracks().forEach(track => track.stop());
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 clearInterval(timerInterval);
 recBtn.classList.remove('recording');
@@ -1447,22 +1416,6 @@ draw();
 }
 function resetDataWithoutPrompt(keepBgm = false) {
 stopBufferPlayback();
-
-// 🔹追加: リセットや終了時に、背後でマイクが掴みっぱなしになるのを完全に防ぐ
-if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-}
-if (source) {
-    try { source.disconnect(); } catch(e) {}
-    source = null;
-}
-if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    try { mediaRecorder.stop(); } catch(e) {}
-}
-mediaRecorder = null;
-// ----------------------------------------------------
-
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false;
@@ -1471,7 +1424,7 @@ pauseBtnImg.src = IMG_PAUSE;
 playbackAudioBuffer = null;
 playbackOffset = 0;
 window.kamonState = null; // 状態のリセット
-eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; analyser = null; dataArray = null;
+eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
 if (!keepBgm) {
 playbackBgmBuffer = null;
 bgmBlob = null; bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
@@ -1611,7 +1564,7 @@ bgmInput.addEventListener('change', async (e) => {
 const file = e.target.files[0];
 if (file) {
 bgmBlob = file;
-if (!audioCtx) audioCtx = createAudioContext();
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 try {
 const bgmArrayBuffer = await bgmBlob.arrayBuffer();
 playbackBgmBuffer = await audioCtx.decodeAudioData(bgmArrayBuffer);
@@ -1628,7 +1581,7 @@ alert("BGMの読み込みに失敗しました꙳☄︎ファイル形式をご�
 // 6. 録音コントロール系の処理
 // ========================================
 recBtn.addEventListener('click', async () => {
-if (!audioCtx) audioCtx = createAudioContext();
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (audioCtx.state === 'suspended') await audioCtx.resume();
 if (isRecording) {
 if (isRecordingPaused) {
@@ -1717,7 +1670,7 @@ alert("録音をリセットしました^.ˬ.^ฅ");
 // 確認再生ボタンの処理
 playPauseBtn.addEventListener('click', async () => {
 if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
-if (!audioCtx) audioCtx = createAudioContext();
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (audioCtx.state === 'suspended') await audioCtx.resume();
 if (isPlayingRecorded) {
 stopBufferPlayback();
@@ -1742,7 +1695,7 @@ downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
 stopBufferPlayback();
 if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
-const renderAudioCtx = createAudioContext();
+const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
 document.getElementById('renderOverlay').style.display = 'flex';
 document.getElementById('miniGameIframe').src = 'mini-game.html';
