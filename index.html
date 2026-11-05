@@ -393,19 +393,13 @@ opacity: 0.3 !important;
 pointer-events: none !important;
 cursor: not-allowed !important;
 }
-.palette-grid {
-display: grid;
-grid-template-columns: repeat(4, 1fr);
-gap: 5px;
-max-width: 110px;
-}
 .palette-circle {
 width: 22px;
 height: 22px;
 border-radius: 50%;
 cursor: pointer;
- border: none; 
-    background-clip: padding-box; 
+border: none; 
+background-clip: padding-box; 
 transition: transform 0.2s;
 }
 .palette-circle.selected {
@@ -427,7 +421,7 @@ align-items: center;
 gap: 10px;
 margin-top: 5px;
 }
-#toukaSlider {
+.touka-slider-zone input[type="range"] {
 max-width: 50px;
 }
 </style>
@@ -531,20 +525,16 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
 <div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
 </div>
-<div class="setting-section" id="menuColor" style="margin-bottom: 0;">
-<div class="setting-title">WAVE COLOR</div>
-<div class="palette-grid" id="standardGrid"></div>
-</div>
 
-<div class="setting-section" id="menuCustomPalette" style="margin-top: 15px;">
+<div class="setting-section" id="menuCustomPalette">
     <div class="setting-title">YOUR PALETTE</div>
 
     <div style="display: flex; align-items: center; gap: 2px; font-size: 1.0rem; color: rgba(255,255,255,0.7); user-select: none; margin-bottom: 12px;">
         <!-- 左：完成形のグラデーション丸 -->
-        <div id="customPreviewCircle" class="palette-circle" style="background: linear-gradient(135deg, #fff0f5, #faf0e6); margin: 0; cursor: pointer;"></div>
+        <div id="customPreviewCircle" class="palette-circle selected" style="background: linear-gradient(135deg, #fff0f5, #faf0e6); margin: 0; cursor: pointer;"></div>
         <span>=</span>
         <!-- 右1：1色目の丸（選択中なら枠線がつく） -->
-        <div id="customPickLabel1" class="palette-circle selected" style="background: #fff0f5; margin: 0; cursor: pointer;"></div>
+        <div id="customPickLabel1" class="palette-circle" style="background: #fff0f5; margin: 0; cursor: pointer;"></div>
         <span>×</span>
         <!-- 右2：2色目の丸 -->
         <div id="customPickLabel2" class="palette-circle" style="background: #faf0e6; margin: 0; cursor: pointer;"></div>
@@ -559,6 +549,21 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div class="touka-slider-zone" id="menuTouka">
 <div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>png</div>
 <input type="range" id="toukaSlider" class="audio-slider" min="0" max="100" value="0">
+</div>
+
+<div class="touka-slider-zone" id="menuWaveSize">
+<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>size</div>
+<input type="range" id="waveSizeSlider" class="audio-slider" min="10" max="200" value="100">
+</div>
+
+<div class="touka-slider-zone" id="menuWavePosX">
+<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>posiX</div>
+<input type="range" id="wavePosXSlider" class="audio-slider" min="-300" max="300" value="0">
+</div>
+
+<div class="touka-slider-zone" id="menuWavePosY">
+<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>posiY</div>
+<input type="range" id="wavePosYSlider" class="audio-slider" min="-300" max="300" value="0">
 </div>
 </div>
 </div>
@@ -614,25 +619,7 @@ const KAMON_ATTRIBUTES = [
   { name: "蜜泡", desc: "豊かな広がりと明るさを持つ声。華やかで心地よい魅力。" }, // 22: 高, 偶, 多, 低
   { name: "月薫", desc: "透明感、奥行き、艶を併せ持つ声。幻想的で長い余韻を残す。" }  // 23: 高, 偶, 多, 高
 ];
-  
-const STANDARD_PALETTES = [
-["#fff0f5", "#faf0e6"],//花朝露
-["#fddb92", "#d1fdff"],//菜花
-["#fff1eb", "#ace0f9"],//早朝
-["#FFF6B7", "#F6416C"],//薔薇
 
-["#bc8f8f", "#ffe4e1"],//テディベア
-["#2a6e6b", "#FFFCDB"],//月夜
-["#f0fff0", "#40e0d0"],//ラグーン
-["#800080", "#f08080"],//口紅
-
-["#a8caba", "#5d4157"],//鳩
-["#191970", "#fffacd"],//夜明
-["#00ffff", "#00008b"],//海中
-["#f107a3", "#7b2ff7"],//ネオン
-
-
-];
 const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
 const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
 // ========================================
@@ -655,7 +642,6 @@ const pictureInput = document.getElementById('pictureInput');
 const styleOptions = document.querySelectorAll('.style-option');
 const menuBg = document.getElementById('menuBg');
 const menuStyle = document.getElementById('menuStyle');
-const menuColor = document.getElementById('menuColor');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const playPauseImg = document.getElementById('playPauseImg');
 const seekBar = document.getElementById('seekBar');
@@ -669,6 +655,9 @@ const audioResetBtn = document.getElementById('audioResetBtn');
 const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
+const waveSizeSlider = document.getElementById('waveSizeSlider');
+const wavePosXSlider = document.getElementById('wavePosXSlider');
+const wavePosYSlider = document.getElementById('wavePosYSlider');
 const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
 const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
 const bgmStartDisplay = document.getElementById('bgmStartDisplay');
@@ -716,29 +705,6 @@ let monitorBgmSource = null; // 録音中のモニター演奏用
 // ========================================
 // 4. 関数の定義
 // ========================================
-function initStandardColors() {
-const grid = document.getElementById('standardGrid');
-grid.innerHTML = '';
-STANDARD_PALETTES.forEach((colors, index) => {
-const circle = document.createElement('div');
-circle.className = 'palette-circle';
-if (index === 0) circle.classList.add('selected');
-circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
-circle.dataset.colors = JSON.stringify(colors);
-grid.appendChild(circle);
-});
-}
-function setupPaletteEvents() {
-const allPalettes = document.querySelectorAll('.palette-circle');
-allPalettes.forEach(palette => {
-palette.addEventListener('click', () => {
-allPalettes.forEach(p => p.classList.remove('selected'));
-palette.classList.add('selected');
-currentWaveColors = JSON.parse(palette.dataset.colors);
-triggerUIRefresh();
-});
-});
-}
 function triggerUIRefresh() {
 if (!isRecording && !isPlayingRecorded) {
 drawStaticWave();
@@ -798,6 +764,16 @@ ctx.fillStyle = gradient;
 ctx.strokeStyle = gradient;
 ctx.lineWidth = 4;
 ctx.lineCap = 'round';
+
+const scale = parseFloat(waveSizeSlider.value) / 100;
+const posX = parseFloat(wavePosXSlider.value);
+const posY = parseFloat(wavePosYSlider.value);
+
+ctx.save();
+ctx.translate(canvas.width / 2 + posX, canvas.height / 2 + posY);
+ctx.scale(scale, scale);
+ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
 if (currentWaveStyle === 'corona') {
 ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
 } else if (currentWaveStyle === 'star') {
@@ -841,9 +817,19 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
     ctx.fillText("3seconds", centerX, centerY - 20);
     ctx.fillText("ANALYZER", centerX, centerY + 20);
 }
+ctx.restore();
 }
 
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
+const scale = parseFloat(waveSizeSlider.value) / 100;
+const posX = parseFloat(wavePosXSlider.value);
+const posY = parseFloat(wavePosYSlider.value);
+
+targetCtx.save();
+targetCtx.translate(targetCanvas.width / 2 + posX, targetCanvas.height / 2 + posY);
+targetCtx.scale(scale, scale);
+targetCtx.translate(-targetCanvas.width / 2, -targetCanvas.height / 2);
+
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
 if (currentWaveColors.length > 2) {
@@ -1108,6 +1094,7 @@ targetCtx.restore();
         targetCtx.fillText("ANALYZER", 0, 40);
 
         targetCtx.restore();
+        targetCtx.restore();
         return;
     }
 
@@ -1279,6 +1266,7 @@ targetCtx.restore();
 
     targetCtx.restore();
 }
+targetCtx.restore();
 }
 
 async function startRecordingStream() {
@@ -1343,12 +1331,18 @@ const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
 timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 function lockMenus() {
-menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuCustomPalette.classList.add('locked');
+menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuCustomPalette.classList.add('locked');
 document.getElementById('menuTouka').classList.add('locked');
+document.getElementById('menuWaveSize').classList.add('locked');
+document.getElementById('menuWavePosX').classList.add('locked');
+document.getElementById('menuWavePosY').classList.add('locked');
 }
 function unlockMenus() {
-menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuCustomPalette.classList.remove('locked');
+menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuCustomPalette.classList.remove('locked');
 document.getElementById('menuTouka').classList.remove('locked');
+document.getElementById('menuWaveSize').classList.remove('locked');
+document.getElementById('menuWavePosX').classList.remove('locked');
+document.getElementById('menuWavePosY').classList.remove('locked');
 }
 function stopBufferPlayback() {
 if (activeAudioNode) { try { activeAudioNode.stop(); } catch(e){} activeAudioNode = null; }
@@ -1504,6 +1498,10 @@ toukaSlider.addEventListener('input', () => {
 const sliderRatio = parseFloat(toukaSlider.value) / 100;
 currentOpacity = 1.0 - (sliderRatio * 0.6); triggerUIRefresh();
 });
+waveSizeSlider.addEventListener('input', triggerUIRefresh);
+wavePosXSlider.addEventListener('input', triggerUIRefresh);
+wavePosYSlider.addEventListener('input', triggerUIRefresh);
+
 styleOptions.forEach(opt => {
 opt.addEventListener('click', () => {
 styleOptions.forEach(o => o.classList.remove('active')); opt.classList.add('active');
@@ -1588,7 +1586,6 @@ if (isRecordingPaused) {
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE;
 if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-// BGMモニターの一時停止解除はAudioContext全体のタイムラインに追従できないため録音時は簡易的なトリガー
 }
 return;
 }
@@ -1617,7 +1614,6 @@ downloadBtn.classList.add('ready');
 playPauseImg.src = IMG_PLAY;
 lockMenus();
 };
-// 録音中にヘッドホンでBGMを聞くためのルーティング（BGM波形も抽出）
 if (playbackBgmBuffer) {
 monitorBgmSource = audioCtx.createBufferSource();
 monitorBgmSource.buffer = playbackBgmBuffer;
@@ -1629,7 +1625,7 @@ bgmGainNode = audioCtx.createGain();
 monitorBgmSource.connect(bgmAnalyser);
 bgmAnalyser.connect(bgmGainNode);
 bgmGainNode.connect(audioCtx.destination);
-bgmGainNode.connect(recordDestination); // 録音ストリームにBGMを合成
+bgmGainNode.connect(recordDestination);
 syncAudioParams();
 if (bgmStartOffset < 0) {
 monitorBgmSource.start(0, Math.abs(bgmStartOffset));
@@ -1667,7 +1663,6 @@ resetDataWithoutPrompt(true);
 alert("録音をリセットしました^.ˬ.^ฅ");
 }
 });
-// 確認再生ボタンの処理
 playPauseBtn.addEventListener('click', async () => {
 if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1678,7 +1673,6 @@ stopBufferPlayback();
 startBufferPlayback(playbackOffset);
 }
 });
-// シークバーを指で動かしたときのリアルタイム音響位置の追従
 seekBar.addEventListener('input', () => {
 if (!playbackAudioBuffer) return;
 isUserChangingIndex = true;
@@ -1690,7 +1684,7 @@ playbackOffset = targetTime;
 }
 });
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
-// 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
+
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
 stopBufferPlayback();
@@ -1726,7 +1720,7 @@ rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.conne
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
 let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
 if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 }; }
-window.kamonState = null; // 書き出し中も初期状態からスタート
+window.kamonState = null;
 const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
 const movieChunks = [];
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
@@ -1741,7 +1735,6 @@ movieRecorder.onstop = () => {
     const finalVideoUrl = URL.createObjectURL(finalBlob);
     const fileName = `voice-wave-${Date.now()}.${fileExtension}`;
     
-    // Android/PCは自動ダウンロード
     if (!isIOS) {
         const a = document.createElement('a'); a.href = finalVideoUrl; a.download = fileName;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -1758,16 +1751,12 @@ movieRecorder.onstop = () => {
     downloadBtn.style.pointerEvents = 'auto'; 
     isMovieRendering = false;
 
-    // 💡 ボタンが押された時の処理を「共有メニュー」を出す仕組みに変更！
     downloadFileBtn.onclick = async () => {
         if (isIOS) {
             try {
-                // Blobデータを、iPhoneが共有できる「Fileオブジェクト」に変換
                 const file = new File([finalBlob], fileName, { type: mimeType });
                 
-                // iPhoneの共有機能が使えるかチェック
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    //iPhone標準の共有メニューを強制的に引き出す！
                     await navigator.share({
                         files: [file],
                         title: '動画の保存',
@@ -1778,11 +1767,9 @@ movieRecorder.onstop = () => {
                 }
             } catch (error) {
                 console.error("共有エラー:", error);
-                // 万が一エラーが出た時のバックアップとして別窓を開く
                 window.open(finalVideoUrl, '_blank');
             }
         } else {
-            // AndroidやPCの場合は今まで通り一発保存
             const a = document.createElement('a');
             a.href = finalVideoUrl;
             a.download = fileName;
@@ -1835,81 +1822,65 @@ alert("動画を一所懸命に書き出し中です。もう一回遊べる丼�
 // ========================================
 // 7. 初期化処理の実行
 // ========================================
-initStandardColors();
-setupPaletteEvents();
 
 // 新カスタムパレットの処理
-// 💡 ここから新しいiro.js用の処理に丸ごと差し替え
 const customPickLabel1 = document.getElementById('customPickLabel1');
 const customPickLabel2 = document.getElementById('customPickLabel2');
 const customPreviewCircle = document.getElementById('customPreviewCircle');
 
-// 現在どちらの丸（1色目か2色目か）を選択しているかを記録する変数（最初は1色目）
 let activeColorIndex = 1; 
 let color1 = "#fff0f5";
 let color2 = "#faf0e6";
 
-// 1. iro.js カラーピッカーの初期化（Google風のデザインに設定）
 const colorPicker = new iro.ColorPicker("#picker", {
-    width: 100, // パネル全体の幅（サイドパネルに収まるサイズ）
-    color: color1, // 初期色
+    width: 100,
+    color: color1,
     display: "block",
     layout: [
-        { component: iro.ui.Box },   // Google風のグラデーション四角形
-        { component: iro.ui.Slider, options: { sliderType: 'hue' } } // 色相（虹色）スライダー
+        { component: iro.ui.Box },
+        { component: iro.ui.Slider, options: { sliderType: 'hue' } }
     ]
 });
 
-// 2. 画面の色と波形を更新する共通関数
 function updateCustomPalette() {
-    // 右側の単色丸の色を更新
     customPickLabel1.style.background = color1;
     customPickLabel2.style.background = color2;
-    
-    // 左側のプレビュー丸にグラデーションを適用
     customPreviewCircle.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
     
-    // 他の標準パレット等の選択枠（selected）を一度すべて外す
     document.querySelectorAll('.palette-circle').forEach(p => p.classList.remove('selected'));
-    
-    // 完成形の丸を選択状態（枠線あり）にする
     customPreviewCircle.classList.add('selected');
     
-    // 波形に色を反映して再描画
     currentWaveColors = [color1, color2];
     triggerUIRefresh();
 }
 
-// 3. ピッカーをいじった（色を変えた）瞬間のイベント
 colorPicker.on('color:change', function(color) {
     if (activeColorIndex === 1) {
-        color1 = color.hexString; // 1色目を更新
+        color1 = color.hexString;
     } else {
-        color2 = color.hexString; // 2色目を更新
+        color2 = color.hexString;
     }
     updateCustomPalette();
 });
 
-// 4. 「右の○」をクリックした時、ピッカーの編集対象を切り替える処理
 customPickLabel1.addEventListener('click', () => {
     activeColorIndex = 1;
     customPickLabel1.classList.add('selected');
     customPickLabel2.classList.remove('selected');
-    colorPicker.setColor(color1); // ピッカーのつまみを現在の1色目の位置に合わせる
+    colorPicker.setColor(color1);
 });
 
 customPickLabel2.addEventListener('click', () => {
     activeColorIndex = 2;
     customPickLabel2.classList.add('selected');
     customPickLabel1.classList.remove('selected');
-    colorPicker.setColor(color2); // ピッカーのつまみを現在の2色目の位置に合わせる
+    colorPicker.setColor(color2);
 });
 
-// 5. 左の完成形の○がクリックされたときも再適応
 customPreviewCircle.addEventListener('click', () => {
     updateCustomPalette();
 });
-// 💡 ここまで
+
 unlockMenus();
 drawStaticWave();
 </script>
